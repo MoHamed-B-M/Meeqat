@@ -244,9 +244,9 @@ fun QiblaScreen(
                         Text("  Kaaba  $bearingText", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.W600))
                     }
                     Text(distanceText + " • 21.4225, 39.8262", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (qibla != null) {
+                    qibla?.let { info ->
                         Text(
-                            String.format(java.util.Locale.getDefault(), "You: %.4f, %.4f", qibla.lat, qibla.lng),
+                            String.format(java.util.Locale.getDefault(), "You: %.4f, %.4f", info.lat, info.lng),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

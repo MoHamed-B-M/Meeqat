@@ -73,10 +73,14 @@ jobs:
           test -n "$SDKMANAGER"
 
           yes | "$SDKMANAGER" --licenses >/dev/null || true
+          # Stable channel for 36
           "$SDKMANAGER" \
             "platform-tools" \
-            "platforms;android-37" \
-            "build-tools;37.0.0" || "$SDKMANAGER" "build-tools;36.0.0"
+            "platforms;android-36" \
+            "build-tools;36.0.0"
+          # 37 is canary-only (material3 alpha26 / compose 2026.08.00 require 37)
+          "$SDKMANAGER" --channel=3 "platforms;android-37" "build-tools;37.0.0" || echo "android-37 canary not available — falling back to preinstalled runner platform if any"
+          ls "$ANDROID_SDK_ROOT/platforms/" || true
 
       - name: Cache Gradle wrapper & dependencies
         uses: actions/cache@v4
