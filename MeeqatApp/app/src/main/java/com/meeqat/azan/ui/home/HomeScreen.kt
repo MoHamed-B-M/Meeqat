@@ -108,7 +108,7 @@ fun HomeScreen(
             ) {
                 // Mosque silhouette background
                 Canvas(Modifier.fillMaxSize()) {
-                    drawMosqueSilhouette(this, MosqueBlue, MosqueDark)
+                    drawMosqueSilhouette(MosqueBlue, MosqueDark)
                     // soft sun/moon glow
                     drawCircle(Color.White.copy(alpha = 0.35f), radius = size.width * 0.18f, center = Offset(size.width * 0.62f, size.height * 0.42f))
                     drawCircle(Color.White.copy(alpha = 0.15f), radius = size.width * 0.26f, center = Offset(size.width * 0.62f, size.height * 0.42f))
