@@ -2,94 +2,100 @@ package com.meeqat.azan.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Meeqat seed — Deep Emerald #0D2C2A + Warm Sand #EADDC8 + Gold #D9AD6A
-// Serene, spiritual, paper & light — not neon.
-object MeeqatSeed {
-    val DeepEmerald = Color(0xFF0D2C2A)
+// Meeqat — Fluid reference: Deep Navy #0F2B4A + Peach #F2B18A + Warm Sand #EADDC8
+// Matches the three reference images: dark navy background, peach accent, rounded fluid shapes.
+// Material 3 Expressive — tonal surfaces, dynamic still supported but default is this serene dark.
+object MeeqatRef {
+    val Navy = Color(0xFF0F2B4A)
+    val NavyDeep = Color(0xFF0B1E36)
+    val NavySurface = Color(0xFF13294E)
+    val NavyContainer = Color(0xFF1A3659)
+    val NavyHigh = Color(0xFF1F3B5F)
+    val NavyHighest = Color(0xFF244062)
+    val Peach = Color(0xFFF2B18A)
+    val PeachLight = Color(0xFFFFDCC5)
+    val PeachContainer = Color(0xFF5D3D2A)
     val WarmSand = Color(0xFFEADDC8)
-    val Gold = Color(0xFFD9AD6A)
+    val MoonOuter = Color(0xFF6B7C94)
+    val MoonMid = Color(0xFFA8B6C9)
+    val Moon = Color(0xFFFFFFFF)
+    val OutlineNavy = Color(0xFF3A4F6A)
+    val OutlineLow = Color(0xFF2A415E)
+    val Passed = Color(0xFF5A6E89)
 }
 
-// Generated tonal-spot palettes from Deep Emerald seed
-// Light scheme — warm, airy, paper-like surfaces
+// Light — kept for system light, but app defaults to dark navy fluid.
 val MeeqatLightColorScheme = androidx.compose.material3.lightColorScheme(
-    primary = Color(0xFF1B4D46),
+    primary = Color(0xFF6F4A2F),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFBCECE2),
-    onPrimaryContainer = Color(0xFF00201C),
-    inversePrimary = Color(0xFF8BD0C2),
-    secondary = Color(0xFF4A635E),
+    primaryContainer = Color(0xFFFFDBC8),
+    onPrimaryContainer = Color(0xFF4A2E18),
+    secondary = Color(0xFF5A6E89),
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFCCE8E1),
-    onSecondaryContainer = Color(0xFF051F1B),
-    tertiary = Color(0xFF7A5A00),
+    secondaryContainer = Color(0xFFD6E4F5),
+    onSecondaryContainer = Color(0xFF0F2B4A),
+    tertiary = Color(0xFF3F6A8A),
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFDF9A),
-    onTertiaryContainer = Color(0xFF261A00),
-    error = Color(0xFFBA1A1A),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFFFDAD6),
-    onErrorContainer = Color(0xFF410002),
-    background = Color(0xFFF6FFF8),
-    onBackground = Color(0xFF171D1B),
-    surface = Color(0xFFF6FFF8),
-    onSurface = Color(0xFF171D1B),
-    surfaceVariant = Color(0xFFDBE5E0),
-    onSurfaceVariant = Color(0xFF3F4946),
-    inverseSurface = Color(0xFF2C3230),
-    inverseOnSurface = Color(0xFFECF2EF),
-    outline = Color(0xFF6F7976),
-    outlineVariant = Color(0xFFBFC9C5),
+    tertiaryContainer = Color(0xFFD6E4F5),
+    onTertiaryContainer = Color(0xFF0F2B4A),
+    background = Color(0xFFF6F8FC),
+    onBackground = Color(0xFF0F2B4A),
+    surface = Color(0xFFF6F8FC),
+    onSurface = Color(0xFF0F2B4A),
+    surfaceVariant = Color(0xFFD6E4F5),
+    onSurfaceVariant = Color(0xFF3A4F6A),
+    outline = Color(0xFF5A6A85),
+    outlineVariant = Color(0xFFC2D0E5),
     scrim = Color(0xFF000000),
-    surfaceTint = Color(0xFF1B4D46),
+    surfaceTint = Color(0xFFF2B18A),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFEFF7F3),
-    surfaceContainer = Color(0xFFE9F0ED),
-    surfaceContainerHigh = Color(0xFFE3EBE8),
-    surfaceContainerHighest = Color(0xFFDDE4E0),
-    surfaceBright = Color(0xFFF6FFF8),
-    surfaceDim = Color(0xFFD5DBD8),
+    surfaceContainerLow = Color(0xFFF0F5FF),
+    surfaceContainer = Color(0xFFE6ECF8),
+    surfaceContainerHigh = Color(0xFFDCE4F2),
+    surfaceContainerHighest = Color(0xFFD0DAEA),
+    surfaceBright = Color(0xFFF6F8FC),
+    surfaceDim = Color(0xFFD6DBE5),
 )
 
+// Dark — Fluid navy/peach, exactly like reference images
 val MeeqatDarkColorScheme = androidx.compose.material3.darkColorScheme(
-    primary = Color(0xFF8BD0C2),
-    onPrimary = Color(0xFF003730),
-    primaryContainer = Color(0xFF005049),
-    onPrimaryContainer = Color(0xFFBCECE2),
-    inversePrimary = Color(0xFF1B4D46),
-    secondary = Color(0xFFB1CCC5),
-    onSecondary = Color(0xFF1C3530),
-    secondaryContainer = Color(0xFF334B47),
-    onSecondaryContainer = Color(0xFFCCE8E1),
-    tertiary = Color(0xFFF0BF3D),
-    onTertiary = Color(0xFF402D00),
-    tertiaryContainer = Color(0xFF5C4300),
-    onTertiaryContainer = Color(0xFFFFDF9A),
-    error = Color(0xFFFFB4AB),
-    onError = Color(0xFF690005),
+    primary = MeeqatRef.Peach,
+    onPrimary = Color(0xFF543A24),
+    primaryContainer = MeeqatRef.PeachContainer,
+    onPrimaryContainer = MeeqatRef.PeachLight,
+    inversePrimary = Color(0xFF8B5A3A),
+    secondary = Color(0xFFB9C6DA),
+    onSecondary = Color(0xFF0F2B4A),
+    secondaryContainer = MeeqatRef.NavyContainer,
+    onSecondaryContainer = Color(0xFFD6E4F5),
+    tertiary = MeeqatRef.Peach,
+    onTertiary = Color(0xFF543A24),
+    tertiaryContainer = MeeqatRef.PeachContainer,
+    onTertiaryContainer = MeeqatRef.PeachLight,
+    error = Color(0xFFFFB4A9),
+    onError = Color(0xFF690003),
     errorContainer = Color(0xFF93000A),
     onErrorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFF0F1513),
-    onBackground = Color(0xFFDDE4E0),
-    surface = Color(0xFF0F1513),
-    onSurface = Color(0xFFDDE4E0),
-    surfaceVariant = Color(0xFF3F4946),
-    onSurfaceVariant = Color(0xFFBFC9C5),
-    inverseSurface = Color(0xFFDDE4E0),
-    inverseOnSurface = Color(0xFF2C3230),
-    outline = Color(0xFF89938F),
-    outlineVariant = Color(0xFF3F4946),
+    background = MeeqatRef.Navy,
+    onBackground = Color(0xFFFFFFFF),
+    surface = MeeqatRef.Navy,
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = MeeqatRef.NavyContainer,
+    onSurfaceVariant = Color(0xFFB9C6DA),
+    inverseSurface = Color(0xFFE6ECF8),
+    inverseOnSurface = Color(0xFF0F2B4A),
+    outline = MeeqatRef.OutlineNavy,
+    outlineVariant = MeeqatRef.OutlineLow,
     scrim = Color(0xFF000000),
-    surfaceTint = Color(0xFF8BD0C2),
-    surfaceContainerLowest = Color(0xFF0A0F0E),
-    surfaceContainerLow = Color(0xFF171D1B),
-    surfaceContainer = Color(0xFF1B211F),
-    surfaceContainerHigh = Color(0xFF252B29),
-    surfaceContainerHighest = Color(0xFF303633),
-    surfaceBright = Color(0xFF343A38),
-    surfaceDim = Color(0xFF0F1513),
+    surfaceTint = MeeqatRef.Peach,
+    surfaceContainerLowest = MeeqatRef.NavyDeep,
+    surfaceContainerLow = MeeqatRef.NavySurface,
+    surfaceContainer = MeeqatRef.NavyContainer,
+    surfaceContainerHigh = MeeqatRef.NavyHigh,
+    surfaceContainerHighest = MeeqatRef.NavyHighest,
+    surfaceBright = Color(0xFF1F3B5F),
+    surfaceDim = MeeqatRef.NavyDeep,
 )
 
-// Legacy aliases for non-expressive fallback if needed
 val LightCustom = MeeqatLightColorScheme
 val DarkCustom = MeeqatDarkColorScheme

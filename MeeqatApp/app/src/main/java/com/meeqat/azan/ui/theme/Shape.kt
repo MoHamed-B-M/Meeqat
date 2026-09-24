@@ -4,22 +4,25 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
-// M3 Expressive shape tokens — 8dp system
-// none 0, xs 4, small 8, medium 12, large 16, largeIncreased 20, xl 28, xlIncreased 32, xxl 48, full 999
+// Fluid — everything rounded, as in reference: cards 16-20dp, pills 999dp
 val MeeqatShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(12.dp),
-    large = RoundedCornerShape(16.dp),
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
     extraLarge = RoundedCornerShape(28.dp),
 )
 
-// Expressive aliases used across Meeqat cards/buttons
-val ShapeSmall = RoundedCornerShape(8.dp)       // chips, snackbars
-val ShapeMedium = RoundedCornerShape(12.dp)     // text fields, menus
-val ShapeLarge = RoundedCornerShape(16.dp)      // FABs, buttons
-val ShapeLargeIncreased = RoundedCornerShape(20.dp)
-val ShapeExtraLarge = RoundedCornerShape(28.dp) // main prayer cards, dialogs
+val ShapeSmall = RoundedCornerShape(12.dp)
+val ShapeMedium = RoundedCornerShape(16.dp)
+val ShapeLarge = RoundedCornerShape(20.dp)
+val ShapeLargeIncreased = RoundedCornerShape(24.dp)
+val ShapeExtraLarge = RoundedCornerShape(28.dp)
 val ShapeExtraLargeIncreased = RoundedCornerShape(32.dp)
 val ShapeExtraExtraLarge = RoundedCornerShape(48.dp)
-val ShapeFull = RoundedCornerShape(999.dp)      // pill buttons, FAB morph
+val ShapeFull = RoundedCornerShape(999.dp)
+
+// Reference fluid radii
+val FluidCard = RoundedCornerShape(16.dp)
+val FluidPill = RoundedCornerShape(999.dp)
+val FluidSheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)

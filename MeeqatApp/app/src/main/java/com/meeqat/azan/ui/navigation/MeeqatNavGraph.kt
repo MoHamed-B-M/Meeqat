@@ -4,20 +4,22 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,10 +30,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.meeqat.azan.ui.calendar.CalendarScreen
 import com.meeqat.azan.ui.home.HomeScreen
 import com.meeqat.azan.ui.qibla.QiblaScreen
 import com.meeqat.azan.ui.settings.SettingsScreen
+import com.meeqat.azan.ui.tracker.TrackerScreen
+import com.meeqat.azan.ui.theme.MeeqatRef
 
 sealed class MeeqatDestination(
     val route: String,
@@ -39,10 +42,12 @@ sealed class MeeqatDestination(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
-    data object Home : MeeqatDestination("home", "Home", Icons.Filled.Home, Icons.Outlined.Home)
+    data object Prayer : MeeqatDestination("home", "Prayer", Icons.Filled.Home, Icons.Outlined.Home)
     data object Qibla : MeeqatDestination("qibla", "Qibla", Icons.Filled.Explore, Icons.Outlined.Explore)
-    data object Calendar : MeeqatDestination("calendar", "Calendar", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth)
+    data object Tracker : MeeqatDestination("tracker", "Tracker", Icons.Filled.CheckCircle, Icons.Outlined.CheckCircle)
     data object Settings : MeeqatDestination("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
+    // legacy calendar kept for internal nav, but not in bottom bar
+    data object Calendar : MeeqatDestination("calendar", "Calendar", Icons.Filled.CheckCircle, Icons.Outlined.CheckCircle)
     data object LocationSettings : MeeqatDestination("settings/location", "Location", Icons.Filled.Home, Icons.Outlined.Home)
     data object MethodSettings : MeeqatDestination("settings/method", "Method", Icons.Filled.Home, Icons.Outlined.Home)
     data object AdjustSettings : MeeqatDestination("settings/adjust", "Adjust", Icons.Filled.Home, Icons.Outlined.Home)
@@ -50,16 +55,14 @@ sealed class MeeqatDestination(
 }
 
 private val topLevelDestinations = listOf(
-    MeeqatDestination.Home,
+    MeeqatDestination.Prayer,
     MeeqatDestination.Qibla,
-    MeeqatDestination.Calendar,
+    MeeqatDestination.Tracker,
     MeeqatDestination.Settings
 )
 
 @Composable
-fun MeeqatNavGraph(
-    modifier: Modifier = Modifier
-) {
+fun MeeqatNavGraph(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -70,7 +73,7 @@ fun MeeqatNavGraph(
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             topLevelDestinations.forEach { dest ->
-                val selected = currentRoute == dest.route
+                val selected = currentRoute == dest.route || (dest.route == "home" && currentRoute == "home")
                 item(
                     selected = selected,
                     onClick = {
@@ -83,10 +86,24 @@ fun MeeqatNavGraph(
                     icon = {
                         Icon(
                             imageVector = if (selected) dest.selectedIcon else dest.unselectedIcon,
-                            contentDescription = dest.label
+                            contentDescription = dest.label,
+                            tint = if (selected) MeeqatRef.Peach else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
-                    label = { Text(dest.label) }
+                    label = {
+                        Text(
+                            dest.label,
+                            color = if (selected) MeeqatRef.Peach else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MeeqatRef.Peach,
+                        selectedTextColor = MeeqatRef.Peach,
+                        indicatorColor = MeeqatRef.NavyHigh,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
             }
         },
@@ -96,26 +113,28 @@ fun MeeqatNavGraph(
             NavigationSuiteType.NavigationDrawer -> NavigationSuiteType.NavigationRail
             else -> NavigationSuiteType.NavigationBar
         },
+        navigationSuiteColors = androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults.colors(
+            navigationBarContainerColor = MeeqatRef.Navy,
+            navigationRailContainerColor = MeeqatRef.Navy,
+        ),
         modifier = modifier
     ) {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            containerColor = MeeqatRef.Navy,
             modifier = Modifier.fillMaxSize()
         ) { innerPadding ->
             NavHost(
                 navController = navController,
-                startDestination = MeeqatDestination.Home.route,
+                startDestination = MeeqatDestination.Prayer.route,
                 modifier = Modifier.fillMaxSize().padding(innerPadding)
             ) {
-                composable(MeeqatDestination.Home.route) {
+                composable(MeeqatDestination.Prayer.route) {
                     HomeScreen(onLocationClick = { navController.navigate(MeeqatDestination.LocationSettings.route) })
                 }
-                composable(MeeqatDestination.Qibla.route) {
-                    QiblaScreen()
-                }
-                composable(MeeqatDestination.Calendar.route) {
-                    CalendarScreen()
-                }
+                composable(MeeqatDestination.Qibla.route) { QiblaScreen() }
+                composable(MeeqatDestination.Tracker.route) { TrackerScreen() }
+                composable(MeeqatDestination.Calendar.route) { TrackerScreen() }
                 composable(MeeqatDestination.Settings.route) {
                     SettingsScreen(
                         onNavigateLocation = { navController.navigate(MeeqatDestination.LocationSettings.route) },
@@ -124,18 +143,10 @@ fun MeeqatNavGraph(
                         onNavigateSound = { navController.navigate(MeeqatDestination.SoundSettings.route) }
                     )
                 }
-                composable(MeeqatDestination.LocationSettings.route) {
-                    SettingsScreen()
-                }
-                composable(MeeqatDestination.MethodSettings.route) {
-                    SettingsScreen()
-                }
-                composable(MeeqatDestination.AdjustSettings.route) {
-                    SettingsScreen()
-                }
-                composable(MeeqatDestination.SoundSettings.route) {
-                    SettingsScreen()
-                }
+                composable(MeeqatDestination.LocationSettings.route) { SettingsScreen() }
+                composable(MeeqatDestination.MethodSettings.route) { SettingsScreen() }
+                composable(MeeqatDestination.AdjustSettings.route) { SettingsScreen() }
+                composable(MeeqatDestination.SoundSettings.route) { SettingsScreen() }
             }
         }
     }
