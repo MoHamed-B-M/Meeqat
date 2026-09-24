@@ -1,0 +1,245 @@
+package com.meeqat.azan.ui.calendar
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.github.msarhan.ummalqura.calendar.UmmalquraCalendar
+import com.meeqat.azan.data.local.DailyPrayerEntity
+import com.meeqat.azan.data.repo.CalculationRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Calendar
+import java.util.GregorianCalendar
+import java.util.Locale
+import javax.inject.Inject
+import kotlin.math.abs
+
+@HiltViewModel
+class CalendarViewModel @Inject constructor(
+    calculationRepository: CalculationRepository
+) : ViewModel() {
+    val allEntities: StateFlow<List<DailyPrayerEntity>> = calculationRepository.observeAll()
+        .map { it.sortedBy { e -> e.date } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+}
+
+@Composable
+fun CalendarScreen(
+    viewModel: CalendarViewModel = hiltViewModel()
+) {
+    val entities by viewModel.allEntities.collectAsState()
+    var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+
+    val monthEntities = remember(entities, currentMonth) {
+        entities.filter { e ->
+            runCatching { YearMonth.parse(e.date.substring(0, 7)) == currentMonth }.getOrDefault(false)
+        }
+    }
+
+    val gregorianFormatter = remember { DateTimeFormatter.ofPattern("d", Locale.getDefault()) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { currentMonth = currentMonth.minusMonths(1) }) {
+                Icon(Icons.Filled.ChevronLeft, contentDescription = "Previous month")
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = hijriMonthLabel(currentMonth),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = { currentMonth = currentMonth.plusMonths(1) }) {
+                Icon(Icons.Filled.ChevronRight, contentDescription = "Next month")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f).padding(vertical = 4.dp))
+            }
+        }
+
+        val daysInMonth = currentMonth.lengthOfMonth()
+        val firstDow = currentMonth.atDay(1).dayOfWeek.value
+        val leadingBlanks = (firstDow - 1) % 7
+        val totalCells = leadingBlanks + daysInMonth
+        val gridItems: List<GridItem> = buildList {
+            repeat(leadingBlanks) { add(GridItem.Blank) }
+            for (d in 1..daysInMonth) {
+                val date = currentMonth.atDay(d)
+                val dateStr = date.toString()
+                val entity = monthEntities.find { it.date == dateStr } ?: entities.find { it.date == dateStr }
+                add(GridItem.Day(date, entity))
+            }
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            items(gridItems) { item ->
+                when (item) {
+                    is GridItem.Blank -> {}
+                    is GridItem.Day -> {
+                        DayCard(
+                            date = item.date,
+                            entity = item.entity,
+                            isToday = item.date == LocalDate.now(),
+                            gregorianFormatter = gregorianFormatter
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private sealed interface GridItem {
+    data object Blank : GridItem
+    data class Day(val date: LocalDate, val entity: DailyPrayerEntity?) : GridItem
+}
+
+@Composable
+private fun DayCard(
+    date: LocalDate,
+    entity: DailyPrayerEntity?,
+    isToday: Boolean,
+    gregorianFormatter: DateTimeFormatter
+) {
+    val hijriLabel = remember(date) { hijriDayLabel(date) }
+    val container = if (isToday) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = if (isToday) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = container, contentColor = contentColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = date.format(gregorianFormatter),
+                style = MaterialTheme.typography.titleSmall,
+                color = contentColor
+            )
+            Text(
+                text = hijriLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (entity != null) {
+                Column(
+                    modifier = Modifier.padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    PrayerMini(label = "F", time = formatTime(entity.fajr))
+                    PrayerMini(label = "D", time = formatTime(entity.dhuhr))
+                    PrayerMini(label = "A", time = formatTime(entity.asr))
+                    PrayerMini(label = "M", time = formatTime(entity.maghrib))
+                    PrayerMini(label = "I", time = formatTime(entity.isha))
+                }
+            } else {
+                Text("--:--", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (isToday) {
+                Text("Today", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrayerMini(label: String, time: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(time, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+private fun formatTime(millis: Long): String {
+    return try {
+        val fmt = DateTimeFormatter.ofPattern("HH:mm").withZone(java.time.ZoneId.systemDefault())
+        fmt.format(java.time.Instant.ofEpochMilli(millis))
+    } catch (_: Exception) { "--:--" }
+}
+
+private fun hijriDayLabel(date: LocalDate): String {
+    return try {
+        val greg = GregorianCalendar(date.year, date.monthValue - 1, date.dayOfMonth)
+        val hijri = UmmalquraCalendar()
+        hijri.setTime(greg.time)
+        val d = hijri.get(Calendar.DAY_OF_MONTH)
+        d.toString()
+    } catch (_: Exception) {
+        ""
+    }
+}
+
+private fun hijriMonthLabel(month: YearMonth): String {
+    return try {
+        val date = month.atDay(1)
+        val greg = GregorianCalendar(date.year, date.monthValue - 1, date.dayOfMonth)
+        val hijri = UmmalquraCalendar()
+        hijri.setTime(greg.time)
+        val m = hijri.get(Calendar.MONTH)
+        val y = hijri.get(Calendar.YEAR)
+        val names = arrayOf("Muharram","Safar","Rabi' I","Rabi' II","Jumada I","Jumada II","Rajab","Sha'ban","Ramadan","Shawwal","Dhu al-Qi'dah","Dhu al-Hijjah")
+        "${names[m.coerceIn(0,11)]} $y AH"
+    } catch (_: Exception) { "" }
+}

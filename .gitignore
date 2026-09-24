@@ -1,0 +1,22 @@
+# Android / Gradle
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+*.apk
+*.aab
+.DS_Store
+
+# Catalog — local reference only, don't push to Meeqat remote
+Compose-Material-3-Expressive-Catalog/
+
+# Opencode
+.opencode/
+
+# Temp
+C:\Users\Admin\AppData\Local\Temp\
+
+# Keep MeeqatApp schemas
+!app/schemas/
