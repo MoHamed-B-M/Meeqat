@@ -1,10 +1,8 @@
 @Suppress("DSL_SCOPE_VIOLATION")
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.kotlinSerialization)
 }
 
@@ -71,10 +69,6 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore.preferences)
-
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
 
     // Room
     implementation(libs.room.runtime)

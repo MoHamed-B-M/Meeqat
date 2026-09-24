@@ -13,22 +13,18 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.meeqat.azan.MainActivity
-import com.meeqat.azan.data.repo.SettingsRepository
+import com.meeqat.azan.di.ServiceLocator
 import com.meeqat.azan.domain.model.Prayer
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class AzanForegroundService : Service() {
 
-    @Inject
-    lateinit var settingsRepository: SettingsRepository
+    private val settingsRepository by lazy { ServiceLocator.settingsRepository }
 
     private var mediaPlayer: MediaPlayer? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)

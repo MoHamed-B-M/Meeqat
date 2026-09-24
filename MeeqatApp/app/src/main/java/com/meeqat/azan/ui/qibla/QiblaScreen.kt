@@ -49,16 +49,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meeqat.azan.data.repo.LocationRepository
 import com.meeqat.azan.domain.model.QiblaInfo
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -83,9 +81,8 @@ class LowPassFilter(private val alpha: Float = LOW_PASS_ALPHA) {
     }
 }
 
-@HiltViewModel
-class QiblaViewModel @Inject constructor(
-    private val locationRepository: LocationRepository
+class QiblaViewModel(
+    private val locationRepository: LocationRepository = com.meeqat.azan.di.ServiceLocator.locationRepository
 ) : ViewModel() {
     private val _qibla = MutableStateFlow<QiblaInfo?>(null)
     val qibla: StateFlow<QiblaInfo?> = _qibla
@@ -129,7 +126,7 @@ class QiblaViewModel @Inject constructor(
 
 @Composable
 fun QiblaScreen(
-    viewModel: QiblaViewModel = hiltViewModel()
+    viewModel: QiblaViewModel = viewModel()
 ) {
     val qibla by viewModel.qibla.collectAsState()
     val context = LocalContext.current

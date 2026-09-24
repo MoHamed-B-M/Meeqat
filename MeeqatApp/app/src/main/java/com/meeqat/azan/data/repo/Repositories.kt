@@ -18,7 +18,6 @@ import com.meeqat.azan.domain.model.LocationSource
 import com.meeqat.azan.domain.model.Madhab
 import com.meeqat.azan.domain.model.ManualOffset
 import com.meeqat.azan.domain.model.SoundConfig
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -27,13 +26,10 @@ import kotlinx.serialization.json.Json
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.TimeZone
-import javax.inject.Inject
-import javax.inject.Singleton
 
 private val Context.dataStore by preferencesDataStore(name = "meeqat_prefs")
 
-@Singleton
-class SettingsRepository @Inject constructor(@ApplicationContext private val context: Context) {
+class SettingsRepository constructor(private val context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     object Keys {
@@ -48,6 +44,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
         val locationSource = stringPreferencesKey("location_source")
         val dynamicColor = booleanPreferencesKey("dynamic_color")
         val globalOffset = intPreferencesKey("global_offset")
+        val appIconColor = stringPreferencesKey("app_icon_color")
     }
 
     val methodFlow: Flow<CalculationMethod> = context.dataStore.data.map {
@@ -72,6 +69,7 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     }
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map { it[Keys.dynamicColor] ?: true }
     val globalOffsetFlow: Flow<Int> = context.dataStore.data.map { it[Keys.globalOffset] ?: 0 }
+    val appIconColorFlow: Flow<String> = context.dataStore.data.map { it[Keys.appIconColor] ?: "emerald" }
 
     suspend fun setMethod(v: CalculationMethod) = context.dataStore.edit { it[Keys.method] = v.name }
     suspend fun setMadhab(v: Madhab) = context.dataStore.edit { it[Keys.madhab] = v.name }
@@ -85,31 +83,34 @@ class SettingsRepository @Inject constructor(@ApplicationContext private val con
     }
     suspend fun setDynamicColor(v: Boolean) = context.dataStore.edit { it[Keys.dynamicColor] = v }
     suspend fun setGlobalOffset(v: Int) = context.dataStore.edit { it[Keys.globalOffset] = v }
+    suspend fun setAppIconColor(v: String) = context.dataStore.edit { it[Keys.appIconColor] = v }
 }
 
-@Singleton
-class CalculationRepository @Inject constructor(
+class CalculationRepository constructor(
     private val db: AppDatabase,
     private val settings: SettingsRepository,
 ) {
-    // Placeholder local calc — replace with com.batoulapps.adhan when wiring domain.
-    // Generates deterministic times from lat/lng + method until Adhan is integrated.
+    // Offline-first engine: uses PrayerEngine (adhan) for astronomical calc — no network.
     suspend fun refresh30Days(lat: Double, lng: Double, zoneId: ZoneId = ZoneId.systemDefault()) {
         val today = LocalDate.now(zoneId)
-        val method = settings.methodFlow.first().name
+        val method = settings.methodFlow.first()
+        val madhab = settings.madhabFlow.first()
+        val highLat = settings.highLatFlow.first()
         val entities = (0 until 30).map { i ->
             val date = today.plusDays(i.toLong())
-            val base = date.atStartOfDay(zoneId).toEpochSecond() * 1000
-            // Approximate offsets for display; real Adhan will replace this.
+            val times = com.meeqat.azan.domain.engine.PrayerEngine.calculateDailyPrayers(
+                latitude = lat, longitude = lng, date = date, zoneId = zoneId,
+                method = method, madhab = madhab, highLatRule = highLat
+            )
             DailyPrayerEntity(
-                date = date.toString(),
-                fajr = base + 5 * 60 * 60 * 1000,
-                sunrise = base + 6 * 60 * 60 * 1000 + 15 * 60 * 1000,
-                dhuhr = base + 12 * 60 * 60 * 1000 + 10 * 60 * 1000,
-                asr = base + 15 * 60 * 60 * 1000 + 30 * 60 * 1000,
-                maghrib = base + 18 * 60 * 60 * 1000 + 25 * 60 * 1000,
-                isha = base + 19 * 60 * 60 * 1000 + 45 * 60 * 1000,
-                method = method,
+                date = times.date,
+                fajr = times.fajr,
+                sunrise = times.sunrise,
+                dhuhr = times.dhuhr,
+                asr = times.asr,
+                maghrib = times.maghrib,
+                isha = times.isha,
+                method = times.method,
                 lat = lat,
                 lng = lng,
             )
@@ -140,17 +141,15 @@ class CalculationRepository @Inject constructor(
     fun observeAll() = db.dailyPrayerDao().observeAll()
 }
 
-@Singleton
-class LocationRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
+class LocationRepository constructor(
+    private val context: Context,
     private val settings: SettingsRepository,
 ) {
     fun observeLocation() = settings.locationFlow
     suspend fun saveLocation(state: LocationState) = settings.setLocation(state)
 }
 
-@Singleton
-class SoundRepository @Inject constructor(private val settings: SettingsRepository) {
+class SoundRepository constructor(private val settings: SettingsRepository) {
     fun observe() = settings.soundFlow
     suspend fun set(config: SoundConfig) = settings.setSound(config)
 }

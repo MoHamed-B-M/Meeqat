@@ -65,16 +65,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meeqat.azan.data.repo.SettingsRepository
+import com.meeqat.azan.di.ServiceLocator
 import com.meeqat.azan.domain.model.AzanMode
 import com.meeqat.azan.domain.model.CalculationMethod
 import com.meeqat.azan.domain.model.ManualOffset
 import com.meeqat.azan.domain.model.Prayer
 import com.meeqat.azan.domain.model.SoundConfig
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -82,11 +82,10 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+class SettingsViewModel(
+    private val settingsRepository: SettingsRepository = ServiceLocator.settingsRepository,
+    private val appIconManager: com.meeqat.azan.domain.icon.AppIconManager = ServiceLocator.appIconManager
 ) : ViewModel() {
 
     val method = settingsRepository.methodFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CalculationMethod.UmmAlQura)
@@ -94,12 +93,18 @@ class SettingsViewModel @Inject constructor(
     val sound = settingsRepository.soundFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SoundConfig())
     val dynamicColor = settingsRepository.dynamicColorFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     val location = settingsRepository.locationFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val appIconColor = settingsRepository.appIconColorFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "emerald")
 
     fun setMethod(m: CalculationMethod) = viewModelScope.launch { settingsRepository.setMethod(m) }
     fun setOffset(o: ManualOffset) = viewModelScope.launch { settingsRepository.setOffset(o) }
     fun setSound(c: SoundConfig) = viewModelScope.launch { settingsRepository.setSound(c) }
     fun setDynamicColor(v: Boolean) = viewModelScope.launch { settingsRepository.setDynamicColor(v) }
     fun setGlobalOffset(v: Int) = viewModelScope.launch { settingsRepository.setGlobalOffset(v) }
+    fun setAppIconColor(key: String) = viewModelScope.launch {
+        settingsRepository.setAppIconColor(key)
+        val c = com.meeqat.azan.domain.icon.AppIconColor.fromKey(key)
+        try { appIconManager.setIcon(c) } catch (_: Exception) {}
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,7 +114,7 @@ fun SettingsScreen(
     onNavigateMethod: () -> Unit = {},
     onNavigateAdjust: () -> Unit = {},
     onNavigateSound: () -> Unit = {},
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = viewModel()
 ) {
     val method by viewModel.method.collectAsState()
     val offset by viewModel.offset.collectAsState()
@@ -217,6 +222,12 @@ fun SettingsScreen(
                 SegmentedButton(selected = !darkMode, onClick = { darkMode = false }, shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)) { Text("Light") }
                 SegmentedButton(selected = darkMode, onClick = { darkMode = true }, shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)) { Text("Dark") }
             }
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            val appIconKey by viewModel.appIconColor.collectAsState()
+            AppIconColorPicker(
+                selectedKey = appIconKey,
+                onSelect = { viewModel.setAppIconColor(it) }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -423,6 +434,70 @@ private fun AzanModeSection() {
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)
             )
         }
+    }
+}
+
+@Composable
+private fun AppIconColorPicker(
+    selectedKey: String,
+    onSelect: (String) -> Unit
+) {
+    val options = listOf(
+        com.meeqat.azan.domain.icon.AppIconColor.Emerald,
+        com.meeqat.azan.domain.icon.AppIconColor.Teal,
+        com.meeqat.azan.domain.icon.AppIconColor.Gold,
+        com.meeqat.azan.domain.icon.AppIconColor.Sand,
+    )
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ListItem(
+            headlineContent = { Text("App icon color") },
+            supportingContent = { Text("Applies to launcher (activity-alias) • restart may be needed") },
+            leadingContent = {
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier.padding(2.dp)
+                        .width(24.dp).height(24.dp)
+                        .padding(0.dp)
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.meeqat.azan.R.drawable.ic_meeqat_icon),
+                        contentDescription = null,
+                        tint = com.meeqat.azan.domain.icon.AppIconColor.fromKey(selectedKey).color,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            options.forEach { opt ->
+                val selected = selectedKey == opt.key
+                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    androidx.compose.material3.Surface(
+                        modifier = Modifier.width(56.dp).height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = if (selected) 2.dp else 0.dp,
+                        onClick = { onSelect(opt.key) }
+                    ) {
+                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier.width(32.dp).height(32.dp)
+                                    .padding(2.dp)
+                            ) {
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(id = com.meeqat.azan.R.drawable.ic_meeqat_icon),
+                                    contentDescription = opt.displayName,
+                                    tint = opt.color,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                    Text(opt.displayName, style = MaterialTheme.typography.labelSmall, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Text("The praying-hands icon tint changes the foreground of the adaptive launcher icon. On Android 13+ the monochrome variant follows system theming.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -29,13 +29,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.msarhan.ummalqura.calendar.UmmalquraCalendar
 import com.meeqat.azan.data.local.DailyPrayerEntity
 import com.meeqat.azan.data.repo.CalculationRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -46,12 +45,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.GregorianCalendar
 import java.util.Locale
-import javax.inject.Inject
 import kotlin.math.abs
 
-@HiltViewModel
-class CalendarViewModel @Inject constructor(
-    calculationRepository: CalculationRepository
+class CalendarViewModel(
+    calculationRepository: CalculationRepository = com.meeqat.azan.di.ServiceLocator.calculationRepository
 ) : ViewModel() {
     val allEntities: StateFlow<List<DailyPrayerEntity>> = calculationRepository.observeAll()
         .map { it.sortedBy { e -> e.date } }
@@ -60,7 +57,7 @@ class CalendarViewModel @Inject constructor(
 
 @Composable
 fun CalendarScreen(
-    viewModel: CalendarViewModel = hiltViewModel()
+    viewModel: CalendarViewModel = viewModel()
 ) {
     val entities by viewModel.allEntities.collectAsState()
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }

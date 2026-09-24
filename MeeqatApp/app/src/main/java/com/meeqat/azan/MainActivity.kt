@@ -10,18 +10,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.meeqat.azan.data.repo.SettingsRepository
+import com.meeqat.azan.di.ServiceLocator
 import com.meeqat.azan.ui.navigation.MeeqatNavGraph
 import com.meeqat.azan.ui.theme.MeeqatTheme
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var settingsRepository: SettingsRepository
+    private val settingsRepository by lazy { ServiceLocator.settingsRepository }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

@@ -31,7 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meeqat.azan.domain.model.Prayer
 import com.meeqat.azan.ui.components.LocationPill
 import com.meeqat.azan.ui.components.PrayerCard
@@ -46,7 +46,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun HomeScreen(
     onLocationClick: () -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel(),
+    viewModel: HomeViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsState()
     // Tick every second for countdown spring

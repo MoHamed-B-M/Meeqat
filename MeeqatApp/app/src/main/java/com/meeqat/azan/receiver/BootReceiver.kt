@@ -6,9 +6,7 @@ import android.content.Intent
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.meeqat.azan.worker.PrayerScheduleWorker
-import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return

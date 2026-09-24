@@ -13,7 +13,6 @@ import com.meeqat.azan.domain.model.ManualOffset
 import com.meeqat.azan.domain.model.Prayer
 import com.meeqat.azan.domain.model.QiblaInfo
 import com.meeqat.azan.domain.model.SoundConfig
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +24,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.GregorianCalendar
 import java.util.Locale
-import javax.inject.Inject
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -42,12 +40,11 @@ data class HomeUiState(
     val qibla: QiblaInfo? = null
 )
 
-@HiltViewModel
-class HomeViewModel @Inject constructor(
-    private val calculationRepository: CalculationRepository,
-    private val locationRepository: LocationRepository,
-    private val settingsRepository: SettingsRepository,
-    private val soundRepository: SoundRepository
+class HomeViewModel(
+    private val calculationRepository: CalculationRepository = com.meeqat.azan.di.ServiceLocator.calculationRepository,
+    private val locationRepository: LocationRepository = com.meeqat.azan.di.ServiceLocator.locationRepository,
+    private val settingsRepository: SettingsRepository = com.meeqat.azan.di.ServiceLocator.settingsRepository,
+    private val soundRepository: SoundRepository = com.meeqat.azan.di.ServiceLocator.soundRepository
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(
