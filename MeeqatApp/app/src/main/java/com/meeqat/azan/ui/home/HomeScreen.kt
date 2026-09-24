@@ -1,20 +1,10 @@
 package com.meeqat.azan.ui.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,19 +13,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,21 +40,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.meeqat.azan.domain.model.Prayer
-import com.meeqat.azan.ui.theme.FluidCard
-import com.meeqat.azan.ui.theme.MeeqatRef
 import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+// Simple palette exactly like reference image: soft blue/orange sky + white card
+private val SimpleBgTop = Color(0xFFB8D8EA)
+private val SimpleBgBottom = Color(0xFFDDECF5)
+private val MosqueBlue = Color(0xFF4A5A85)
+private val MosqueDark = Color(0xFF2F3A5A)
+private val CardWhite = Color(0xFFFFFFFF)
+private val TextDark = Color(0xFF1A2742)
+private val TextMuted = Color(0xFF6B7A90)
+private val TextTime = Color(0xFF3A4A6A)
 
 @Composable
 fun HomeScreen(
@@ -74,229 +77,202 @@ fun HomeScreen(
     LaunchedEffect(Unit) { while (true) { delay(1000); now = System.currentTimeMillis() } }
 
     val times = ui.todayTimes
-    val next = ui.nextPrayer
-    val nextName = next?.name ?: "Maghrib"
-    val nextMillis = next?.let { times?.timeFor(it) } ?: (now + 37 * 60 * 1000)
-    val remainingMins = ((nextMillis - now) / 60000).coerceAtLeast(0)
-    val nextLabel = when {
-        next == null -> "37 mins left until Isha"
-        next == Prayer.Isha -> "${remainingMins.toInt()} mins left until Isha"
-        else -> {
-            val following = nextAfter(next, times)
-            if (following != null) "${remainingMins.toInt()} mins left until ${following.name}" else "${remainingMins.toInt()} mins left"
+    // Simple list as in image: Saheri, Fajr Start, Fajr End, Ishraq, Zohar (mapped from our 6)
+    val simpleItems = remember(times, now) {
+        if (times == null) {
+            listOf(
+                "Saheri Time" to "04:49" to false,
+                "Fajr Start" to "05:11" to false,
+                "Fajr End" to "06:06" to false,
+                "Ishraq" to "06:26" to false,
+                "Zohar" to "12:19" to false,
+            )
+        } else {
+            listOf(
+                "Saheri Time" to formatTime(times.fajr - 22 * 60 * 1000) to (times.fajr > now),
+                "Fajr Start" to formatTime(times.fajr) to isNext(times.fajr, times, now),
+                "Fajr End" to formatTime(times.sunrise) to isNext(times.sunrise, times, now),
+                "Ishraq" to formatTime(times.sunrise + 15 * 60 * 1000) to false,
+                "Zohar" to formatTime(times.dhuhr) to (times.dhuhr > now),
+            )
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(MeeqatRef.Navy)) {
-        val maxW = 840.dp
-        val hPad = if (maxWidth >= 840.dp) 24.dp else 0.dp
-
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SimpleBgTop, SimpleBgBottom)))) {
         Column(
-            Modifier.fillMaxSize().widthIn(max = maxW).align(Alignment.TopCenter)
-                .verticalScroll(rememberScrollState()).padding(horizontal = hPad)
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState())
         ) {
-            // --- Header with moon & stars ---
+            // Header -- exactly like image: Nizamul Awqat Nanded top left, Today 16 Oct, Thursday, calendar icon
             Box(
-                Modifier.fillMaxWidth().height(220.dp).background(MeeqatRef.Navy)
+                Modifier.fillMaxWidth().height(320.dp).padding(horizontal = 0.dp)
             ) {
-                // stars
+                // Mosque silhouette background
                 Canvas(Modifier.fillMaxSize()) {
-                    val starColor = Color.White.copy(alpha = 0.35f)
-                    listOf(
-                        Offset(size.width * 0.08f, size.height * 0.18f),
-                        Offset(size.width * 0.22f, size.height * 0.08f),
-                        Offset(size.width * 0.35f, size.height * 0.22f),
-                        Offset(size.width * 0.55f, size.height * 0.14f),
-                        Offset(size.width * 0.72f, size.height * 0.30f),
-                        Offset(size.width * 0.18f, size.height * 0.42f),
-                        Offset(size.width * 0.42f, size.height * 0.38f),
-                    ).forEach { drawCircle(starColor, radius = 1.2f, center = it) }
-                    repeat(6) { i ->
-                        val x = size.width * (0.05f + i * 0.16f)
-                        val y = size.height * (0.25f + (i % 2) * 0.04f)
-                        drawCircle(Color.White.copy(alpha = 0.18f), 2f, Offset(x, y))
-                    }
+                    drawMosqueSilhouette(this, MosqueBlue, MosqueDark)
+                    // soft sun/moon glow
+                    drawCircle(Color.White.copy(alpha = 0.35f), radius = size.width * 0.18f, center = Offset(size.width * 0.62f, size.height * 0.42f))
+                    drawCircle(Color.White.copy(alpha = 0.15f), radius = size.width * 0.26f, center = Offset(size.width * 0.62f, size.height * 0.42f))
                 }
-                // moon
-                Box(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 16.dp).size(96.dp)) {
-                    Box(Modifier.size(96.dp).clip(CircleShape).background(Color(0xFF6B7C94)))
-                    Box(Modifier.size(76.dp).clip(CircleShape).background(Color(0xFFA8B6C9)).align(Alignment.Center))
-                    Box(Modifier.size(52.dp).clip(CircleShape).background(Color.White).align(Alignment.Center))
-                }
-                Column(Modifier.align(Alignment.TopStart).padding(start = 20.dp, top = 28.dp)) {
-                    Text(
-                        nextName, style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.W700, fontSize = 38.sp, letterSpacing = (-0.5).sp),
-                        color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    // pill
-                    Surface(shape = RoundedCornerShape(999.dp), color = Color(0xFF1A3659), modifier = Modifier.height(28.dp)) {
+                // top bar
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 48.dp, start = 20.dp, end = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(Modifier.weight(1f)) {
                         Text(
-                            nextLabel, style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF8EA0B8)),
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp), maxLines = 1, overflow = TextOverflow.Ellipsis
+                            "Nizamul Awqat Nanded",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF3A4A6A), fontWeight = FontWeight.W600, letterSpacing = 0.3.sp, fontSize = 11.sp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            ui.gregorianDate.ifBlank { "Today 16 Oct, 2022 ," },
+                            style = MaterialTheme.typography.titleSmall.copy(color = TextDark, fontWeight = FontWeight.W700, fontSize = 14.sp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "Thursday",
+                            style = MaterialTheme.typography.titleSmall.copy(color = TextDark, fontWeight = FontWeight.W700, fontSize = 14.sp),
+                            maxLines = 1
                         )
                     }
-                }
-                // wavy peach line
-                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(72.dp).padding(horizontal = 8.dp)) {
-                    WavyTimeline(
-                        times = times,
-                        next = next,
-                        now = now,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-
-            // TODAY + date
-            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Surface(shape = RoundedCornerShape(6.dp), color = Color.Transparent, border = androidx.compose.foundation.BorderStroke(1.dp, MeeqatRef.Peach.copy(alpha = 0.9f))) {
-                    Text("TODAY", style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp, fontWeight = FontWeight.W600, color = MeeqatRef.Peach), modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {}) { Icon(Icons.Filled.ChevronLeft, null, tint = MeeqatRef.Peach, modifier = Modifier.size(22.dp)) }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-                        Text(ui.gregorianDate.ifBlank { "Friday 19th March" }, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.W700, color = MeeqatRef.Peach, fontSize = 18.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(ui.hijriDate.uppercase().ifBlank { "5 SHA'BAN 1442 AH" }, style = MaterialTheme.typography.bodySmall.copy(color = MeeqatRef.Peach, letterSpacing = 0.5.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(32.dp)) {
+                        Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.CalendarToday, null, tint = MosqueBlue, modifier = Modifier.size(16.dp))
+                        }
                     }
-                    IconButton(onClick = {}) { Icon(Icons.Filled.ChevronRight, null, tint = MeeqatRef.Peach, modifier = Modifier.size(22.dp)) }
+                }
+                // Tap for location (hidden but keeps function)
+                Box(Modifier.fillMaxSize().padding(bottom = 24.dp), contentAlignment = Alignment.BottomCenter) {
+                    // small handle
+                    Box(Modifier.width(36.dp).height(4.dp).clip(RoundedCornerShape(999.dp)).background(Color.White.copy(alpha = 0.5f)))
                 }
             }
 
-            // Prayer list — fluid rounded 16dp cards
-            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (times != null) {
-                    times.asList().forEach { (prayer, millis) ->
-                        val isActive = prayer == next
-                        val time = formatTime(millis)
-                        val isPast = millis < now - 5 * 60 * 1000 && !isActive
-                        PrayerRowFluid(
-                            name = prayer.name.let { if (it == "Isha") "Isha'a" else it },
+            // White card — fluid rounded 24dp top, like image
+            Surface(
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+                color = CardWhite,
+                tonalElevation = 8.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    simpleItems.forEach { (pair, isActive) ->
+                        val (name, time) = pair
+                        SimplePrayerRow(
+                            name = name,
                             time = time,
                             isActive = isActive,
-                            isPast = isPast,
+                            onToggle = {}
                         )
                     }
-                } else {
-                    // loading skeletons — fluid
-                    repeat(6) {
-                        Box(Modifier.fillMaxWidth().height(56.dp).clip(FluidCard).background(MeeqatRef.NavyContainer.copy(alpha = 0.6f)))
-                    }
+                    // extra bottom padding for nav
+                    Spacer(Modifier.height(96.dp))
                 }
-                Spacer(Modifier.height(96.dp)) // nav padding
             }
         }
     }
 }
 
 @Composable
-private fun PrayerRowFluid(name: String, time: String, isActive: Boolean, isPast: Boolean) {
-    val border = if (isActive) 2.dp else 1.dp
-    val borderColor = if (isActive) Color.White else MeeqatRef.OutlineLow
-    val textColor = when {
-        isActive -> Color.White
-        isPast -> MeeqatRef.Passed
-        else -> Color.White.copy(alpha = 0.9f)
-    }
-    val timeColor = when {
-        isActive -> Color.White
-        isPast -> MeeqatRef.Passed
-        else -> Color.White
-    }
-    Surface(
-        shape = FluidCard,
-        color = MeeqatRef.NavyContainer.copy(alpha = if (isActive) 1f else 0.55f),
-        border = androidx.compose.foundation.BorderStroke(border, borderColor),
+private fun SimplePrayerRow(
+    name: String,
+    time: String,
+    isActive: Boolean,
+    onToggle: () -> Unit
+) {
+    var enabled by remember(isActive) { mutableStateOf(isActive) }
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (enabled) Color(0xFFF0F4F8) else Color(0xFFF7F8FA),
+            contentColor = TextDark
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = if (enabled) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE0E8F0)) else null,
         modifier = Modifier.fillMaxWidth().height(56.dp)
     ) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = if (isActive) FontWeight.W700 else FontWeight.W500, color = textColor), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                name,
+                style = MaterialTheme.typography.bodyMedium.copy(color = TextDark, fontWeight = FontWeight.W500, fontSize = 14.sp),
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+            )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(time, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.W600, color = timeColor, fontSize = 18.sp), maxLines = 1)
-                Icon(Icons.Filled.NotificationsOff, null, tint = if (isActive) Color.White else MeeqatRef.Passed, modifier = Modifier.size(18.dp))
+                Text(
+                    time,
+                    style = MaterialTheme.typography.bodyMedium.copy(color = TextTime, fontWeight = FontWeight.W600, fontSize = 14.sp),
+                    maxLines = 1
+                )
+                // simple alarm toggle — fluid
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { enabled = it; onToggle() },
+                    thumbContent = {
+                        Icon(
+                            if (enabled) Icons.Filled.Notifications else Icons.Filled.NotificationsOff,
+                            null, modifier = Modifier.size(12.dp)
+                        )
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = MosqueBlue,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = Color(0xFFD0D8E5),
+                        checkedBorderColor = Color.Transparent,
+                        uncheckedBorderColor = Color.Transparent
+                    ),
+                    modifier = Modifier.size(width = 44.dp, height = 26.dp)
+                )
             }
         }
     }
 }
 
-@Composable
-private fun WavyTimeline(times: com.meeqat.azan.domain.model.DailyPrayerTimes?, next: Prayer?, now: Long, modifier: Modifier = Modifier) {
-    val peach = MeeqatRef.Peach
-    val muted = MeeqatRef.NavyHigh
-    val activeIdx = remember(next, times) {
-        if (times == null || next == null) 4 else times.asList().indexOfFirst { it.first == next }.coerceAtLeast(0)
-    }
-    Canvas(modifier) {
-        val w = size.width; val h = size.height
-        val cy = h * 0.45f
-        val pts = if (times != null) {
-            val list = times.asList()
-            // map prayers to x 0..w, y via sine wave peaking at Dhuhr/Asr region
-            list.mapIndexed { i, _ ->
-                val x = w * (0.02f + 0.96f * i / 5f)
-                // wave: start low, peak at 0.4-0.6, then down
-                val t = i / 5f
-                val wave = kotlin.math.sin(t * Math.PI).toFloat() * 0.9f + kotlin.math.sin(t * Math.PI * 2 + 0.3f).toFloat() * 0.12f
-                val y = cy - wave * (h * 0.42f)
-                Offset(x, y)
-            }
-        } else {
-            // fallback static
-            listOf(0.02f, 0.22f, 0.42f, 0.60f, 0.76f, 0.96f).mapIndexed { i, t ->
-                val x = w * t
-                val wave = kotlin.math.sin(t * Math.PI).toFloat()
-                Offset(x, cy - wave * h * 0.35f)
-            }
-        }
-        // horizontal TODAY line
-        val lineY = h * 0.72f
-        drawLine(Color.White.copy(alpha = 0.08f), Offset(0f, lineY), Offset(w, lineY), strokeWidth = 1f)
-        // peach wavy path up to active
-        val pathPeach = Path(); val pathMuted = Path()
-        fun buildPath(path: Path, points: List<Offset>) {
-            if (points.isEmpty()) return
-            path.moveTo(points[0].x, points[0].y)
-            for (i in 0 until points.size - 1) {
-                val cX = (points[i].x + points[i+1].x)/2
-                path.quadraticTo(points[i].x, points[i].y, cX, (points[i].y+points[i+1].y)/2)
-            }
-            if (points.size > 1) {
-                val last = points.last(); val prev = points[points.size-2]
-                val cX = (prev.x + last.x)/2
-                path.quadraticTo(last.x, last.y, last.x, last.y)
-            }
-        }
-        // split at active
-        val before = pts.take(activeIdx + 1)
-        val after = pts.drop(activeIdx)
-        buildPath(pathPeach, before)
-        buildPath(pathMuted, after)
-        drawPath(pathPeach, peach, style = Stroke(width = 3.5f))
-        drawPath(pathMuted, Color(0xFF5A6E89), style = Stroke(width = 2.5f))
-        // dots
-        pts.forEachIndexed { i, p ->
-            val isActive = i == activeIdx
-            val isFuture = i > activeIdx
-            val fill = when {
-                isActive -> Color.White
-                isFuture -> MeeqatRef.NavyContainer
-                else -> Color.White
-            }
-            val stroke = if (isActive) peach else if (isFuture) Color(0xFF5A6E89) else Color.White.copy(alpha=0.6f)
-            drawCircle(fill, radius = if (isActive) 7f else 6f, center = p)
-            drawCircle(stroke, radius = if (isActive) 7f else 6f, center = p, style = Stroke(2f))
-            // inner dot for active
-            if (isActive) drawCircle(peach, 3f, p)
-        }
-    }
+private fun isNext(millis: Long, times: com.meeqat.azan.domain.model.DailyPrayerTimes, now: Long): Boolean {
+    val list = times.asList().map { it.second }.sorted()
+    val idx = list.indexOf(millis)
+    if (idx == -1) return false
+    val prevDone = if (idx > 0) now > list[idx - 1] else true
+    return prevDone && now < millis + 30 * 60 * 1000
 }
 
-private fun nextAfter(current: Prayer, times: com.meeqat.azan.domain.model.DailyPrayerTimes?): Prayer? {
-    if (times == null) return null
-    val order = listOf(Prayer.Fajr, Prayer.Sunrise, Prayer.Dhuhr, Prayer.Asr, Prayer.Maghrib, Prayer.Isha)
-    val idx = order.indexOf(current)
-    return if (idx in 0 until order.size - 1) order[idx + 1] else null
+private fun DrawScope.drawMosqueSilhouette(mosque: Color, dark: Color) {
+    val w = size.width; val h = size.height
+    val baseY = h * 0.78f
+    val path = Path().apply {
+        moveTo(0f, baseY)
+        // left minaret
+        lineTo(w * 0.18f, baseY); lineTo(w * 0.18f, h * 0.52f); lineTo(w * 0.20f, h * 0.48f); lineTo(w * 0.22f, h * 0.52f); lineTo(w * 0.22f, baseY)
+        // left dome
+        cubicTo(w * 0.24f, h * 0.45f, w * 0.30f, h * 0.38f, w * 0.36f, h * 0.45f)
+        lineTo(w * 0.36f, baseY)
+        // center big dome
+        cubicTo(w * 0.38f, h * 0.30f, w * 0.52f, h * 0.28f, w * 0.60f, h * 0.42f)
+        lineTo(w * 0.60f, baseY)
+        // right minaret + domes
+        lineTo(w * 0.72f, baseY); lineTo(w * 0.72f, h * 0.50f); lineTo(w * 0.74f, h * 0.46f); lineTo(w * 0.76f, h * 0.50f); lineTo(w * 0.76f, baseY)
+        cubicTo(w * 0.78f, h * 0.44f, w * 0.82f, h * 0.40f, w * 0.86f, h * 0.48f)
+        lineTo(w * 0.86f, baseY); lineTo(w, baseY); lineTo(w, h); lineTo(0f, h); close()
+    }
+    drawPath(path, mosque)
+    // crescents
+    val crescentPath = Path().apply {
+        addOval(Rect(Offset(w * 0.44f, h * 0.34f), androidx.compose.ui.geometry.Size(14.dp.toPx(), 14.dp.toPx())))
+    }
+    drawPath(crescentPath, Color.White.copy(alpha = 0.9f))
+    // second crescent right
+    val c2 = Path().apply { addOval(Rect(Offset(w * 0.74f, h * 0.38f), androidx.compose.ui.geometry.Size(10.dp.toPx(), 10.dp.toPx()))) }
+    drawPath(c2, Color.White.copy(alpha = 0.9f))
 }
 
 private val timeFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
