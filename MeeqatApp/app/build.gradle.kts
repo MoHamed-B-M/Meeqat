@@ -10,13 +10,43 @@ android {
     namespace = "com.meeqat.azan"
     compileSdk = 37
 
+    signingConfigs {
+        create("release") {
+            val ciKeystore = file("release.keystore")
+            val debugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+            when {
+                ciKeystore.exists() -> {
+                    storeFile = ciKeystore
+                    storePassword = System.getenv("KEYSTORE_PASSWORD") ?: (project.findProperty("MEEQAT_STORE_PASSWORD") as String? ?: "meeqat123")
+                    keyAlias = System.getenv("KEY_ALIAS") ?: (project.findProperty("MEEQAT_KEY_ALIAS") as String? ?: "meeqat")
+                    keyPassword = System.getenv("KEY_PASSWORD") ?: (project.findProperty("MEEQAT_KEY_PASSWORD") as String? ?: "meeqat123")
+                }
+                debugKeystore.exists() -> {
+                    storeFile = debugKeystore
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
+                else -> {
+                    storeFile = debugKeystore
+                    storePassword = "android"
+                    keyAlias = "androiddebugkey"
+                    keyPassword = "android"
+                }
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.meeqat.azan"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
-
+        val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
+        versionCode = System.getenv("MEEQAT_VERSION_CODE")?.toIntOrNull()
+            ?: System.getenv("FLAMBO_VERSION_CODE")?.toIntOrNull()
+            ?: runNumber?.let { 100000 + it } ?: 1
+        versionName = System.getenv("MEEQAT_VERSION_NAME")
+            ?: System.getenv("FLAMBO_VERSION_NAME") ?: "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }
@@ -24,10 +54,21 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
     compileOptions {
@@ -39,6 +80,8 @@ android {
         resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" }
     }
 }
+
+kotlin { jvmToolchain(21) }
 
 dependencies {
     // Core
