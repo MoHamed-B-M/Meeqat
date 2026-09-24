@@ -37,8 +37,8 @@ object PrayerEngine {
 
         val coordinates = Coordinates(latitude, longitude)
         val params = toAdhanParameters(method).apply {
-            madhab = toAdhanMadhab(madhab)
-            highLatitudeRule = toAdhanHighLat(highLatRule)
+            this.madhab = toAdhanMadhab(madhab)
+            this.highLatitudeRule = toAdhanHighLat(highLatRule)
         }
 
         val components = DateComponents(date.year, date.monthValue, date.dayOfMonth)
