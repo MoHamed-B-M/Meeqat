@@ -20,3 +20,7 @@ C:\Users\Admin\AppData\Local\Temp\
 
 # Keep MeeqatApp schemas
 !app/schemas/
+# Kotlin build cache
+.kotlin/
+MeeqatApp/.kotlin/
+MeeqatApp/app/schemas/

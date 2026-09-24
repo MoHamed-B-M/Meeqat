@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -65,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -274,12 +277,32 @@ private fun PrayerAdjustRow(
     val calculated = formatMinutes(baseMillis)
     val adjusted = formatMinutes(baseMillis + value * 60L * 1000L)
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(prayer.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.width(90.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = prayer.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(min = 64.dp)
+            )
             AssistChip(
                 onClick = {},
-                label = { Text("Calculated: $calculated → Adjusted: $adjusted", style = MaterialTheme.typography.labelSmall) },
-                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                label = {
+                    Text(
+                        text = "Calculated: $calculated → Adjusted: $adjusted",
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.weight(1f, fill = true)
             )
         }
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -427,26 +450,72 @@ private fun SoundPickerSection(
 @Composable
 private fun AzanModeSection() {
     val modes = remember { mutableStateOf(mapOf<Prayer, AzanMode>()) }
-    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         Prayer.entries.filter { it != Prayer.Sunrise }.forEach { p ->
             val current = modes.value[p] ?: AzanMode.FullAzan
-            ListItem(
-                headlineContent = { Text(p.name) },
-                supportingContent = { Text(current.name) },
-                leadingContent = { Icon(Icons.Filled.Notifications, contentDescription = null) },
-                trailingContent = {
-                    SingleChoiceSegmentedButtonRow {
-                        AzanMode.entries.forEachIndexed { idx, m ->
-                            SegmentedButton(
-                                selected = current == m,
-                                onClick = { modes.value = modes.value.toMutableMap().apply { put(p, m) } },
-                                shape = SegmentedButtonDefaults.itemShape(index = idx, count = 3)
-                            ) { Text(m.name.take(1)) }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = p.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = when (current) {
+                            AzanMode.FullAzan -> "Full Azan"
+                            AzanMode.NotificationOnly -> "Notification"
+                            AzanMode.Silent -> "Silent"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.widthIn(min = 110.dp, max = 130.dp).heightIn(min = 36.dp)
+                ) {
+                    AzanMode.entries.forEachIndexed { idx, m ->
+                        SegmentedButton(
+                            selected = current == m,
+                            onClick = { modes.value = modes.value.toMutableMap().apply { put(p, m) } },
+                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = 3),
+                            modifier = Modifier.heightIn(min = 36.dp)
+                        ) {
+                            Text(
+                                text = when (m) {
+                                    AzanMode.FullAzan -> "F"
+                                    AzanMode.NotificationOnly -> "N"
+                                    AzanMode.Silent -> "S"
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+            }
         }
     }
 }
@@ -457,61 +526,68 @@ private fun AppIconColorPicker(
     onSelect: (String) -> Unit
 ) {
     val options = listOf(
-        com.meeqat.azan.domain.icon.AppIconColor.Emerald,
-        com.meeqat.azan.domain.icon.AppIconColor.Teal,
-        com.meeqat.azan.domain.icon.AppIconColor.Gold,
-        com.meeqat.azan.domain.icon.AppIconColor.Sand,
+        com.meeqat.azan.domain.icon.AppIconColor.Emerald to com.meeqat.azan.R.drawable.ic_meeqat_fg_emerald,
+        com.meeqat.azan.domain.icon.AppIconColor.Teal to com.meeqat.azan.R.drawable.ic_meeqat_fg_teal,
+        com.meeqat.azan.domain.icon.AppIconColor.Gold to com.meeqat.azan.R.drawable.ic_meeqat_fg_gold,
+        com.meeqat.azan.domain.icon.AppIconColor.Sand to com.meeqat.azan.R.drawable.ic_meeqat_fg_sand,
     )
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ListItem(
-            headlineContent = { Text("App icon color") },
-            supportingContent = { Text("Applies to launcher (activity-alias) • restart may be needed") },
+            headlineContent = { Text("App icon color", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            supportingContent = { Text("Launcher adaptive icon • activity-alias relaunch", maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingContent = {
-                androidx.compose.foundation.layout.Box(
-                    modifier = androidx.compose.ui.Modifier.padding(2.dp)
-                        .width(24.dp).height(24.dp)
-                        .padding(0.dp)
-                ) {
-                    Icon(
-                        painter = androidx.compose.ui.res.painterResource(id = com.meeqat.azan.R.drawable.ic_meeqat_icon),
-                        contentDescription = null,
-                        tint = com.meeqat.azan.domain.icon.AppIconColor.fromKey(selectedKey).color,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                // Actual adaptive preview: Warm Sand background + selected foreground glyph
+                val sel = com.meeqat.azan.domain.icon.AppIconColor.fromKey(selectedKey)
+                val selRes = when (sel) {
+                    com.meeqat.azan.domain.icon.AppIconColor.Emerald -> com.meeqat.azan.R.drawable.ic_meeqat_fg_emerald
+                    com.meeqat.azan.domain.icon.AppIconColor.Gold -> com.meeqat.azan.R.drawable.ic_meeqat_fg_gold
+                    com.meeqat.azan.domain.icon.AppIconColor.Teal -> com.meeqat.azan.R.drawable.ic_meeqat_fg_teal
+                    else -> com.meeqat.azan.R.drawable.ic_meeqat_fg_sand
+                }
+                Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFEADDC8), modifier = Modifier.size(40.dp)) {
+                    Box(Modifier.size(40.dp).padding(6.dp), contentAlignment = Alignment.Center) {
+                        Icon(painter = androidx.compose.ui.res.painterResource(id = selRes), contentDescription = null, tint = Color.Unspecified, modifier = Modifier.fillMaxSize())
+                    }
                 }
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            options.forEach { opt ->
+            options.forEach { (opt, res) ->
                 val selected = selectedKey == opt.key
-                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    androidx.compose.material3.Surface(
-                        modifier = Modifier.width(56.dp).height(56.dp),
+                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(
+                        modifier = Modifier.width(64.dp).height(64.dp),
                         shape = RoundedCornerShape(16.dp),
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                        tonalElevation = if (selected) 2.dp else 0.dp,
+                        color = Color(0xFFEADDC8),
+                        tonalElevation = 0.dp,
+                        shadowElevation = if (selected) 4.dp else 0.dp,
+                        border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
                         onClick = { onSelect(opt.key) }
                     ) {
-                        androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            androidx.compose.foundation.layout.Box(
-                                modifier = Modifier.width(32.dp).height(32.dp)
-                                    .padding(2.dp)
-                            ) {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(id = com.meeqat.azan.R.drawable.ic_meeqat_icon),
-                                    contentDescription = opt.displayName,
-                                    tint = opt.color,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                        Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
+                            // Render actual foreground vector (already colored per variant) without tint, on Warm Sand
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = res),
+                                contentDescription = opt.displayName,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
-                    Text(opt.displayName, style = MaterialTheme.typography.labelSmall, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        opt.displayName, style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false
+                    )
                 }
             }
         }
-        Text("The praying-hands icon tint changes the foreground of the adaptive launcher icon. On Android 13+ the monochrome variant follows system theming.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "Preview shows Warm Sand background + hand glyph in selected color. System monochrome (Android 13+) follows wallpaper.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2, overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
