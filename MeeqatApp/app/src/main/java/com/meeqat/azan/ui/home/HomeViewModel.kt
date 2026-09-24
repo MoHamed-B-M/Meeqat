@@ -68,8 +68,10 @@ class HomeViewModel(
                 settingsRepository.methodFlow,
                 soundRepository.observe(),
                 calculationRepository.observeAll()
-            ) { location, _, _, _, sound, _ ->
-                Pair(location as LocationState?, sound as SoundConfig)
+            ) { values: Array<Any?> ->
+                val location = values[0] as LocationState?
+                val sound = values[4] as SoundConfig?
+                location to sound
             }.collect { (location, sound) ->
                 refresh(location, sound)
             }

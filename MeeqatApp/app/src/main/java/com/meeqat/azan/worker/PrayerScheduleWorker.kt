@@ -5,7 +5,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.AlarmManagerCompat
 import androidx.room.Room
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -83,10 +82,10 @@ class PrayerScheduleWorker(
                 try {
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
                 } catch (_: SecurityException) {
-                    AlarmManagerCompat.setWindow(alarmManager, AlarmManager.RTC_WAKEUP, millis, 60_000L, pi)
+                    alarmManager.setWindow(AlarmManager.RTC_WAKEUP, millis, 60_000L, pi)
                 }
             } else {
-                AlarmManagerCompat.setWindow(alarmManager, AlarmManager.RTC_WAKEUP, millis, 60_000L, pi)
+                alarmManager.setWindow(AlarmManager.RTC_WAKEUP, millis, 60_000L, pi)
             }
             requestCode++
         }

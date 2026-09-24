@@ -26,6 +26,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.meeqat.azan.ui.theme.ShapeExtraLarge
@@ -165,7 +167,7 @@ fun PrayerCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Text(name, style = if (isNext) MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.W600) else MaterialTheme.typography.titleMedium)
                 if (hasCustomSound) {
-                    Icon(imageVector = androidx.compose.material.icons.Icons.Filled.MusicNote, contentDescription = "custom sound", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(imageVector = Icons.Filled.Notifications, contentDescription = "custom sound", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                 }
                 if (leadingIcon != null) {
                     Icon(imageVector = leadingIcon, contentDescription = null, modifier = Modifier.size(18.dp))

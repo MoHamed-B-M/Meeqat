@@ -27,7 +27,11 @@ object MeeqatMotion {
     val StandardAccelerateEasing = CubicBezierEasing(0.3f, 0f, 1f, 1f)
 
     // Helpers
-    fun emphasized tweenSpec() = tween<androidx.compose.ui.graphics.Color>(EmphasizedDuration, easing = EmphasizedEasing)
+    fun emphasizedTweenSpec() =
+        tween<androidx.compose.ui.graphics.Color>(
+            durationMillis = EmphasizedDuration,
+            easing = EmphasizedEasing
+        )
 
     // 8dp spacing system — margins/padding/gaps adaptive by WindowSizeClass
     val SpacingXs: Dp = 4.dp

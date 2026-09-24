@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.AlarmManagerCompat
 import com.meeqat.azan.data.repo.SettingsRepository
 import com.meeqat.azan.domain.engine.PrayerEngine
 import com.meeqat.azan.domain.model.DailyPrayerTimes
@@ -252,16 +251,16 @@ class AthanScheduler constructor(
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
             } else {
                 // Fallback: window of 60 seconds — inexact but still wakes device
-                AlarmManagerCompat.setWindow(am, AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
+                am.setWindow(AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
             }
         } catch (e: SecurityException) {
             // Extra fallback if exact alarm permission revoked between check and call
             try {
-                AlarmManagerCompat.setWindow(am, AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
+                am.setWindow(AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
             } catch (_: Exception) {}
         } catch (_: Exception) {
             try {
-                AlarmManagerCompat.setWindow(am, AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
+                am.setWindow(AlarmManager.RTC_WAKEUP, triggerAtMillis, 60_000L, pi)
             } catch (_: Exception) {}
         }
     }

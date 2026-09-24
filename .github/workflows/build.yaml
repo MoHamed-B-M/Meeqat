@@ -69,15 +69,14 @@ jobs:
 
       - name: Accept SDK licenses & install platforms
         run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT ANDROID_HOME=$ANDROID_HOME"
-          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/" || true
           SDKMANAGER=$(find "$ANDROID_SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n1)
-          echo "sdkmanager=$SDKMANAGER"
-          if [[ -z "$SDKMANAGER" ]]; then echo "No sdkmanager found!"; exit 1; fi
-          yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "platforms;android-34" "build-tools;34.0.0"
-          "$SDKMANAGER" --channel=3 "platforms;android-37" "build-tools;37.0.0" || echo "android-37 not on canary channel — falling back to preinstalled platform (if any)"
-          ls "$ANDROID_SDK_ROOT/platforms/" || true
+          test -n "$SDKMANAGER"
+
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
       - name: Cache Gradle wrapper & dependencies
         uses: actions/cache@v4
