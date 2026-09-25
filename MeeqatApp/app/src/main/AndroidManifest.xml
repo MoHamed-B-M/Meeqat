@@ -85,6 +85,13 @@
             </intent-filter>
         </activity-alias>
 
+        <activity
+            android:name=".ui.athan.AzanActivity"
+            android:exported="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@android:style/Theme.NoTitleBar" />
+
         <service
             android:name=".service.AzanForegroundService"
             android:enabled="true"

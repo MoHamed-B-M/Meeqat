@@ -12,8 +12,8 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.meeqat.azan.MainActivity
 import com.meeqat.azan.di.ServiceLocator
+import com.meeqat.azan.ui.athan.AzanActivity
 import com.meeqat.azan.domain.model.Prayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,9 +55,10 @@ class AzanForegroundService : Service() {
     }
 
     private fun startAzan(prayerName: String, time: Long) {
-        val fullScreenIntent = Intent(this, MainActivity::class.java).apply {
+        val fullScreenIntent = Intent(this, AzanActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra(EXTRA_PRAYER, prayerName)
+            putExtra(EXTRA_TIME, time)
         }
         val fullScreenPending = PendingIntent.getActivity(this, 0, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 

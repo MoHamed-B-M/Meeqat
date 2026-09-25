@@ -10,7 +10,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
-import com.meeqat.azan.MainActivity
+import com.meeqat.azan.ui.athan.AzanActivity
 import com.meeqat.azan.service.AzanForegroundService
 
 /**
@@ -99,9 +99,10 @@ class AthanReceiver : BroadcastReceiver() {
         try {
             ensureChannel(context)
 
-            val openIntent = Intent(context, MainActivity::class.java).apply {
+            val openIntent = Intent(context, AzanActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra(AzanForegroundService.EXTRA_PRAYER, prayerName)
+                putExtra(AzanForegroundService.EXTRA_TIME, time)
             }
             val openPi = PendingIntent.getActivity(
                 context, 0, openIntent,
