@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.meeqat.azan"
+    namespace = "com.vibeprayer.app"
     compileSdk = 37
 
     signingConfigs {
@@ -38,7 +38,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.meeqat.azan"
+        applicationId = "com.vibeprayer.app"
         minSdk = 26
         targetSdk = 37
         val runNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
@@ -87,6 +87,8 @@ dependencies {
     // Core
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
     implementation(libs.activity.compose)
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.ui)

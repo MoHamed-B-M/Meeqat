@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
-        android:name=".MeeqatApp"
+        android:name=".VibeApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
@@ -36,88 +33,32 @@
             </intent-filter>
         </activity>
 
-        <!-- Alternate launcher icons for Settings > Appearance > App Icon Color -->
-        <activity-alias
-            android:name=".LauncherEmerald"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_emerald"
-            android:roundIcon="@mipmap/ic_launcher_emerald"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherGold"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_gold"
-            android:roundIcon="@mipmap/ic_launcher_gold"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherTeal"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_teal"
-            android:roundIcon="@mipmap/ic_launcher_teal"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".LauncherSand"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_sand"
-            android:roundIcon="@mipmap/ic_launcher_sand"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
         <activity
-            android:name=".ui.athan.AzanActivity"
+            android:name=".alarm.AdhanAlarmActivity"
             android:exported="false"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
             android:theme="@android:style/Theme.NoTitleBar" />
 
         <service
-            android:name=".service.AzanForegroundService"
+            android:name=".alarm.AdhanService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_provider_paths" />
-        </provider>
+        <receiver
+            android:name=".alarm.AdhanAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
 
         <receiver
-            android:name=".receiver.BootReceiver"
+            android:name=".alarm.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
             </intent-filter>
         </receiver>
