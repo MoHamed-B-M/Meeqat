@@ -5,8 +5,9 @@ import androidx.room.Room
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.meeqat.azan.data.local.AppDatabase
+import com.meeqat.azan.data.repo.CalculationRepository
+import com.meeqat.azan.data.repo.PrayerRepository
 import com.meeqat.azan.data.repo.SettingsRepository
-import com.meeqat.azan.domain.engine.PrayerEngine
 import com.meeqat.azan.domain.model.LocationState
 import com.meeqat.azan.domain.scheduler.AthanScheduler
 import kotlinx.coroutines.flow.first
@@ -20,11 +21,12 @@ import kotlin.math.sqrt
 /**
  * Midnight refresh worker — runs at 00:05 local time.
  *
- * - Recomputes today's (and next 7 days) prayer times via [PrayerEngine] and reschedules
- *   exact alarms via [AthanScheduler].
- * - Detects significant location drift (> 30 km from last saved location) and triggers
- *   a full 30-day recalculation when needed.
- * - Fully offline: uses only local DB + DataStore + Adhan computation. No network.
+ * - Refreshes the current month online-first via [PrayerRepository] (AlAdhan
+ *   API with on-device `adhan` fallback) and reschedules exact alarms via
+ *   [AthanScheduler].
+ * - Detects significant location drift (> 30 km from last saved location) and
+ *   persists the drifted location before refreshing.
+ * - Alarms always read cached Room rows, so they work 100% offline.
  *
  * Scheduling: enqueue via WorkManager PeriodicWork at ~00:05 or via BootReceiver's
  * OneTimeWork. The worker itself does not loop — it runs once and [Result.success]
@@ -56,9 +58,6 @@ class MidnightRefreshWorker(
 
             // Load current settings
             val location: LocationState? = try { settings.locationFlow.first() } catch (_: Exception) { null }
-            val method = try { settings.methodFlow.first() } catch (_: Exception) { com.meeqat.azan.domain.model.CalculationMethod.UmmAlQura }
-            val madhab = try { settings.madhabFlow.first() } catch (_: Exception) { com.meeqat.azan.domain.model.Madhab.Shafii }
-            val highLat = try { settings.highLatFlow.first() } catch (_: Exception) { com.meeqat.azan.domain.model.HighLatitudeRule.AngleBased }
 
             if (location == null) {
                 // No location yet — nothing to schedule, but not a failure
@@ -71,12 +70,10 @@ class MidnightRefreshWorker(
             val inputLat = inputData.getDouble("input_lat", Double.NaN)
             val inputLng = inputData.getDouble("input_lng", Double.NaN)
             var effectiveLocation = location
-            var drifted = false
 
             if (!inputLat.isNaN() && !inputLng.isNaN()) {
                 val dist = haversineKm(location.latitude, location.longitude, inputLat, inputLng)
                 if (dist > 30.0) {
-                    drifted = true
                     effectiveLocation = location.copy(latitude = inputLat, longitude = inputLng)
                     // Persist the new location so future runs use it
                     try { settings.setLocation(effectiveLocation) } catch (_: Exception) {}
@@ -86,11 +83,13 @@ class MidnightRefreshWorker(
                 // For now, no extra check — drift detection via inputData is the contract.
             }
 
-            // ---- Recalculate and persist 30 days (keep DB fresh) ----
+            // ---- Online-first month refresh (API with local fallback keeps DB fresh) ----
             try {
-                recalculateAndPersist(effectiveLocation.latitude, effectiveLocation.longitude, zoneId, method, madhab, highLat, today)
+                val calc = CalculationRepository(db, settings)
+                val repo = PrayerRepository(appContext, db, settings, calc)
+                repo.refreshMonth(today.year, today.monthValue, effectiveLocation.latitude, effectiveLocation.longitude, zoneId)
             } catch (_: Exception) {
-                // Persistence failure should not block alarm scheduling — in-memory schedule still possible
+                // Refresh failure should not block alarm scheduling — cached rows still usable
             }
 
             // ---- Reschedule alarms for next 7 days ----
@@ -111,34 +110,6 @@ class MidnightRefreshWorker(
             // Transient failure (e.g., DB locked) — retry with backoff
             Result.retry()
         }
-    }
-
-    private suspend fun recalculateAndPersist(
-        lat: Double,
-        lng: Double,
-        zoneId: ZoneId,
-        method: com.meeqat.azan.domain.model.CalculationMethod,
-        madhab: com.meeqat.azan.domain.model.Madhab,
-        highLat: com.meeqat.azan.domain.model.HighLatitudeRule,
-        today: LocalDate
-    ) {
-        val entities = (0 until 30).map { i ->
-            val date = today.plusDays(i.toLong())
-            val times = PrayerEngine.calculateDailyPrayers(lat, lng, date, zoneId, method, madhab, highLat)
-            com.meeqat.azan.data.local.DailyPrayerEntity(
-                date = times.date,
-                fajr = times.fajr,
-                sunrise = times.sunrise,
-                dhuhr = times.dhuhr,
-                asr = times.asr,
-                maghrib = times.maghrib,
-                isha = times.isha,
-                method = times.method,
-                lat = lat,
-                lng = lng
-            )
-        }
-        db.dailyPrayerDao().insertAll(entities)
     }
 
     /** Haversine distance in km between two WGS-84 points. */

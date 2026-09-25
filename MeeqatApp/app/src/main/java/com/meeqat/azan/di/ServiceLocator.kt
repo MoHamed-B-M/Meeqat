@@ -6,6 +6,7 @@ import com.meeqat.azan.data.local.AppDatabase
 import com.meeqat.azan.data.repo.CalculationRepository
 import com.meeqat.azan.data.repo.LocationRepository
 import com.meeqat.azan.data.repo.NominatimRepository
+import com.meeqat.azan.data.repo.PrayerRepository
 import com.meeqat.azan.data.repo.SettingsRepository
 import com.meeqat.azan.data.repo.SoundRepository
 import com.meeqat.azan.domain.icon.AppIconManager
@@ -31,6 +32,9 @@ object ServiceLocator {
     val locationRepository: LocationRepository by lazy { LocationRepository(requireContext(), settingsRepository) }
     val soundRepository: SoundRepository by lazy { SoundRepository(settingsRepository) }
     val nominatimRepository: NominatimRepository by lazy { NominatimRepository(requireContext()) }
+    val prayerRepository: PrayerRepository by lazy {
+        PrayerRepository(requireContext(), database, settingsRepository, calculationRepository)
+    }
     val athanScheduler: AthanScheduler by lazy { AthanScheduler(requireContext(), settingsRepository) }
     val appIconManager: AppIconManager by lazy { AppIconManager(requireContext()) }
 }

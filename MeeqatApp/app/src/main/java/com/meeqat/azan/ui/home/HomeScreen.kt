@@ -84,24 +84,23 @@ fun HomeScreen(
         } catch (_: Exception) { null }
     }
 
-    val simpleItems = remember(times, now) {
+    // Live rows only — while the DB has no row for today a loading
+    // placeholder (names + "--:--") is shown; never fake static times.
+    val simpleItems: List<Triple<String, String, Boolean>>? = remember(times, now) {
         if (times == null) {
-            listOf(
-                "Saheri Time" to "04:49" to false,
-                "Fajr Start" to "05:11" to false,
-                "Fajr End" to "06:06" to false,
-                "Ishraq" to "06:26" to false,
-                "Dhuhr" to "12:19" to false,
-            )
+            null
         } else {
             listOf(
-                "Saheri Time" to formatTime(times.fajr - 22 * 60 * 1000) to (times.fajr > now),
-                "Fajr Start" to formatTime(times.fajr) to isNext(times.fajr, times, now),
-                "Fajr End" to formatTime(times.sunrise) to isNext(times.sunrise, times, now),
-                "Ishraq" to formatTime(times.sunrise + 15 * 60 * 1000) to false,
-                "Dhuhr" to formatTime(times.dhuhr) to (times.dhuhr > now),
+                Triple("Saheri Time", formatTime(times.fajr - 22 * 60 * 1000), times.fajr > now),
+                Triple("Fajr Start", formatTime(times.fajr), isNext(times.fajr, times, now)),
+                Triple("Fajr End", formatTime(times.sunrise), isNext(times.sunrise, times, now)),
+                Triple("Ishraq", formatTime(times.sunrise + 15 * 60 * 1000), false),
+                Triple("Dhuhr", formatTime(times.dhuhr), times.dhuhr > now),
             )
         }
+    }
+    val loadingNames = remember {
+        listOf("Saheri Time", "Fajr Start", "Fajr End", "Ishraq", "Dhuhr")
     }
 
     // Next prayer headline (big text).
@@ -205,6 +204,23 @@ fun HomeScreen(
                         ),
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
+                    // Offline badge — shown when times come from on-device calculation.
+                    if (times != null && ui.dataSource == com.meeqat.azan.domain.model.DataSource.LOCAL_CALCULATION) {
+                        Spacer(Modifier.height(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = Color.Black.copy(alpha = 0.45f)
+                        ) {
+                            Text(
+                                "Offline • on-device calculation",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = Color.White, fontSize = 13.sp
+                                ),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -220,9 +236,15 @@ fun HomeScreen(
                     Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 22.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    simpleItems.forEach { (pair, isActive) ->
-                        val (name, time) = pair
-                        BigPrayerRow(name = name, time = time, isActive = isActive, onToggle = {})
+                    val rows = simpleItems
+                    if (rows != null) {
+                        rows.forEach { (name, time, isActive) ->
+                            BigPrayerRow(name = name, time = time, isActive = isActive, onToggle = {})
+                        }
+                    } else {
+                        loadingNames.forEach { name ->
+                            BigPrayerRow(name = name, time = "--:--", isActive = false, onToggle = {}, loading = true)
+                        }
                     }
                     Spacer(Modifier.height(24.dp).navigationBarsPadding())
                 }
@@ -236,7 +258,8 @@ private fun BigPrayerRow(
     name: String,
     time: String,
     isActive: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    loading: Boolean = false,
 ) {
     var enabled by remember(isActive) { mutableStateOf(isActive) }
     Card(
@@ -273,6 +296,7 @@ private fun BigPrayerRow(
                 Switch(
                     checked = enabled,
                     onCheckedChange = { enabled = it; onToggle() },
+                    enabled = !loading,
                     modifier = Modifier.size(width = 56.dp, height = 32.dp)
                         .semantics { contentDescription = "Alarm for $name" },
                     thumbContent = {

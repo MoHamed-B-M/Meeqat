@@ -8,6 +8,7 @@ import com.meeqat.azan.data.repo.LocationRepository
 import com.meeqat.azan.data.repo.SettingsRepository
 import com.meeqat.azan.data.repo.SoundRepository
 import com.meeqat.azan.domain.model.DailyPrayerTimes
+import com.meeqat.azan.domain.model.DataSource
 import com.meeqat.azan.domain.model.LocationState
 import com.meeqat.azan.domain.model.ManualOffset
 import com.meeqat.azan.domain.model.Prayer
@@ -37,14 +38,16 @@ data class HomeUiState(
     val soundConfig: SoundConfig? = null,
     val hijriDate: String = "",
     val gregorianDate: String = "",
-    val qibla: QiblaInfo? = null
+    val qibla: QiblaInfo? = null,
+    val dataSource: DataSource = DataSource.LOCAL_CALCULATION,
 )
 
 class HomeViewModel(
     private val calculationRepository: CalculationRepository = com.meeqat.azan.di.ServiceLocator.calculationRepository,
     private val locationRepository: LocationRepository = com.meeqat.azan.di.ServiceLocator.locationRepository,
     private val settingsRepository: SettingsRepository = com.meeqat.azan.di.ServiceLocator.settingsRepository,
-    private val soundRepository: SoundRepository = com.meeqat.azan.di.ServiceLocator.soundRepository
+    private val soundRepository: SoundRepository = com.meeqat.azan.di.ServiceLocator.soundRepository,
+    private val prayerRepository: com.meeqat.azan.data.repo.PrayerRepository = com.meeqat.azan.di.ServiceLocator.prayerRepository,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(
@@ -57,6 +60,27 @@ class HomeViewModel(
 
     init {
         observeFlows()
+        ensureTodayTimes()
+    }
+
+    /**
+     * Cold-start fill: if today's row is missing, refresh online-first via
+     * [com.meeqat.azan.data.repo.PrayerRepository] (API with local fallback).
+     * Runs once — subsequent updates arrive through [observeFlows].
+     */
+    private fun ensureTodayTimes() {
+        viewModelScope.launch {
+            try {
+                val zoneId = java.time.ZoneId.systemDefault()
+                val hasToday = calculationRepository.todayTimes(zoneId) != null
+                if (!hasToday) {
+                    val loc = locationRepository.observeLocation().first()
+                    if (loc != null) {
+                        prayerRepository.refreshToday(loc.latitude, loc.longitude, zoneId)
+                    }
+                }
+            } catch (_: Exception) {}
+        }
     }
 
     private fun observeFlows() {
@@ -67,18 +91,20 @@ class HomeViewModel(
                 settingsRepository.globalOffsetFlow,
                 settingsRepository.methodFlow,
                 soundRepository.observe(),
-                calculationRepository.observeAll()
+                calculationRepository.observeAll(),
+                settingsRepository.lastSourceFlow
             ) { values: Array<Any?> ->
                 val location = values[0] as LocationState?
                 val sound = values[4] as SoundConfig?
-                location to sound
-            }.collect { (location, sound) ->
-                refresh(location, sound)
+                val source = values[6] as DataSource
+                Triple(location, sound, source)
+            }.collect { (location, sound, source) ->
+                refresh(location, sound, source)
             }
         }
     }
 
-    private suspend fun refresh(location: LocationState?, soundConfig: SoundConfig?) {
+    private suspend fun refresh(location: LocationState?, soundConfig: SoundConfig?, source: DataSource) {
         val adjusted = calculationRepository.todayTimes()
         val raw = fetchRawTimes(adjusted)
         val next = determineNextPrayer(adjusted)
@@ -91,7 +117,8 @@ class HomeViewModel(
             soundConfig = soundConfig,
             hijriDate = computeHijriDate(),
             gregorianDate = computeGregorianDate(),
-            qibla = qibla
+            qibla = qibla,
+            dataSource = source,
         )
     }
 

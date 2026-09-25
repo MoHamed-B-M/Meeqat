@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.meeqat.azan.data.local.AppDatabase
@@ -12,6 +13,7 @@ import com.meeqat.azan.data.local.DailyPrayerEntity
 import com.meeqat.azan.data.local.ManualOffsetEntity
 import com.meeqat.azan.domain.model.CalculationMethod
 import com.meeqat.azan.domain.model.DailyPrayerTimes
+import com.meeqat.azan.domain.model.DataSource
 import com.meeqat.azan.domain.model.HighLatitudeRule
 import com.meeqat.azan.domain.model.LocationState
 import com.meeqat.azan.domain.model.LocationSource
@@ -45,6 +47,8 @@ class SettingsRepository constructor(private val context: Context) {
         val dynamicColor = booleanPreferencesKey("dynamic_color")
         val globalOffset = intPreferencesKey("global_offset")
         val appIconColor = stringPreferencesKey("app_icon_color")
+        val lastSource = stringPreferencesKey("prayer_source")
+        val lastSync = longPreferencesKey("prayer_sync")
     }
 
     val methodFlow: Flow<CalculationMethod> = context.dataStore.data.map {
@@ -70,6 +74,10 @@ class SettingsRepository constructor(private val context: Context) {
     val dynamicColorFlow: Flow<Boolean> = context.dataStore.data.map { it[Keys.dynamicColor] ?: true }
     val globalOffsetFlow: Flow<Int> = context.dataStore.data.map { it[Keys.globalOffset] ?: 0 }
     val appIconColorFlow: Flow<String> = context.dataStore.data.map { it[Keys.appIconColor] ?: "emerald" }
+    val lastSourceFlow: Flow<DataSource> = context.dataStore.data.map {
+        runCatching { DataSource.valueOf(it[Keys.lastSource] ?: "LOCAL_CALCULATION") }.getOrDefault(DataSource.LOCAL_CALCULATION)
+    }
+    val lastSyncFlow: Flow<Long> = context.dataStore.data.map { it[Keys.lastSync] ?: 0L }
 
     suspend fun setMethod(v: CalculationMethod) = context.dataStore.edit { it[Keys.method] = v.name }
     suspend fun setMadhab(v: Madhab) = context.dataStore.edit { it[Keys.madhab] = v.name }
@@ -84,6 +92,8 @@ class SettingsRepository constructor(private val context: Context) {
     suspend fun setDynamicColor(v: Boolean) = context.dataStore.edit { it[Keys.dynamicColor] = v }
     suspend fun setGlobalOffset(v: Int) = context.dataStore.edit { it[Keys.globalOffset] = v }
     suspend fun setAppIconColor(v: String) = context.dataStore.edit { it[Keys.appIconColor] = v }
+    suspend fun setLastSource(v: DataSource) = context.dataStore.edit { it[Keys.lastSource] = v.name }
+    suspend fun setLastSync(v: Long) = context.dataStore.edit { it[Keys.lastSync] = v }
 }
 
 class CalculationRepository constructor(
