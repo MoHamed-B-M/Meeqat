@@ -11,6 +11,7 @@ data class VibeColors(
     val bgRaised: androidx.compose.ui.graphics.Color = VibeSemantics.bgRaised,
     val textPrimary: androidx.compose.ui.graphics.Color = VibeSemantics.textPrimary,
     val textSecondary: androidx.compose.ui.graphics.Color = VibeSemantics.textSecondary,
+    val textDisabled: androidx.compose.ui.graphics.Color = VibeSemantics.textDisabled,
     val borderSubtle: androidx.compose.ui.graphics.Color = VibeSemantics.borderSubtle,
     val accent: androidx.compose.ui.graphics.Color = VibeSemantics.accentSolid
 )

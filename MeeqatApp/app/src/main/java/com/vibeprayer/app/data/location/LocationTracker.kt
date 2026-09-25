@@ -2,12 +2,14 @@ package com.vibeprayer.app.data.location
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 data class LatLng(val lat: Double, val lng: Double, val label: String = "")
@@ -21,10 +23,11 @@ class LocationTracker(private val context: Context) {
                 Priority.PRIORITY_HIGH_ACCURACY,
                 CancellationTokenSource().token
             )
-            val loc = suspendCancellableCoroutine { cont ->
-                task.addOnSuccessListener { cont.resume(it, null) }
-                task.addOnFailureListener { cont.resumeWithException(it) }
-            } ?: return lastKnown()
+            val loc: Location? = suspendCancellableCoroutine { cont ->
+                task.addOnSuccessListener { location -> cont.resume(location) }
+                task.addOnFailureListener { e -> cont.resumeWithException(e) }
+            }
+            if (loc == null) return lastKnown()
             LatLng(loc.latitude, loc.longitude)
         } catch (_: Exception) {
             lastKnown()
