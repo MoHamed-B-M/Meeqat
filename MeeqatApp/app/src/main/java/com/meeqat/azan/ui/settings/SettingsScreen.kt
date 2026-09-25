@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -25,13 +28,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Surface
@@ -44,6 +50,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -130,7 +137,15 @@ fun SettingsScreen(
 
     val scroll = rememberScrollState()
 
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .statusBarsPadding()
+            .displayCutoutPadding()
+            .navigationBarsPadding()
+            .verticalScroll(scroll)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
 
         Text("Settings", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 8.dp))
 
@@ -247,6 +262,14 @@ fun SettingsScreen(
                 selectedKey = appIconKey,
                 onSelect = { viewModel.setAppIconColor(it) }
             )
+        }
+
+        SettingsGroup(title = "App updates") {
+            UpdateSection()
+        }
+
+        SettingsGroup(title = "About") {
+            AboutSection()
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -589,6 +612,131 @@ private fun AppIconColorPicker(
             "Preview shows Warm Sand background + hand glyph in selected color. System monochrome (Android 13+) follows wallpaper.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 2, overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun UpdateSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var checking by remember { mutableStateOf(false) }
+    var latest by remember { mutableStateOf<AppUpdater.Latest?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var progress by remember { mutableStateOf<Float?>(null) }
+    var downloaded by remember { mutableStateOf<java.io.File?>(null) }
+    val installedName = remember { AppUpdater.installedVersionName(context) }
+    val installedCode = remember { AppUpdater.installedVersionCode(context) }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ListItem(
+            headlineContent = { Text("Current version", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            supportingContent = { Text("$installedName ($installedCode)", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        if (checking) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        error?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        }
+        latest?.let { info ->
+            val updateAvailable = info.versionCode > 0 && installedCode > 0 && info.versionCode > installedCode
+            Text(
+                if (updateAvailable) "Update available: ${info.releaseName}" else "You're on the latest beta: ${info.releaseName}",
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                "Published ${info.publishedAt.take(10)} • ${(info.sizeBytes / 1024 / 1024)} MB",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+            progress?.let { p ->
+                if (p >= 0f) LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth())
+                else LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        error = null; progress = 0f; downloaded = null
+                        scope.launch {
+                            try {
+                                val file = AppUpdater.download(context, info.apkUrl) { p -> progress = p }
+                                downloaded = file
+                                progress = null
+                            } catch (e: Exception) {
+                                progress = null
+                                error = "Download failed: ${e.message ?: "network error"}"
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Download") }
+                Button(
+                    onClick = {
+                        val file = downloaded ?: return@Button
+                        try {
+                            if (!AppUpdater.canInstallUnknownApps(context)) {
+                                AppUpdater.openUnknownAppsSettings(context)
+                                error = "Allow install from this app, then tap Install again."
+                            } else {
+                                AppUpdater.install(context, file)
+                            }
+                        } catch (e: Exception) {
+                            error = "Install failed: ${e.message ?: "unknown error"}"
+                        }
+                    },
+                    enabled = downloaded != null,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Install") }
+            }
+        } ?: run {
+            Button(
+                onClick = {
+                    checking = true; error = null; latest = null
+                    scope.launch {
+                        try {
+                            latest = AppUpdater.fetchLatest()
+                        } catch (e: Exception) {
+                            error = "Check failed: ${e.message ?: "network error"}"
+                        } finally {
+                            checking = false
+                        }
+                    }
+                },
+                enabled = !checking,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (checking) "Checking…" else "Check for updates") }
+            Text(
+                "Checks the beta-latest release on GitHub. Downloads install over this build when the version is newer.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3, overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun AboutSection() {
+    val context = LocalContext.current
+    val versionName = remember { AppUpdater.installedVersionName(context) }
+    val versionCode = remember { AppUpdater.installedVersionCode(context) }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        ListItem(
+            headlineContent = { Text("Meeqat — Azan", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            supportingContent = { Text("Version $versionName ($versionCode) • ${context.packageName}", maxLines = 2, overflow = TextOverflow.Ellipsis) },
+            leadingContent = { Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+        Text(
+            "Offline-first prayer times with exact alarms. Times are calculated on-device when offline; weekly online sync refreshes the calendar when network is available.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 4, overflow = TextOverflow.Ellipsis
         )
     }
 }

@@ -1,6 +1,5 @@
 package com.meeqat.azan.ui.navigation
 
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -18,8 +17,6 @@ import com.meeqat.azan.ui.settings.SettingsScreen
 fun MeeqatNavGraph(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
     Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = androidx.compose.ui.graphics.Color(0xFFB8D8EA),
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         NavHost(
@@ -29,7 +26,8 @@ fun MeeqatNavGraph(modifier: Modifier = Modifier) {
         ) {
             composable("home") {
                 HomeScreen(
-                    onLocationClick = { navController.navigate("settings") }
+                    onLocationClick = { navController.navigate("settings/location") },
+                    onSettingsClick = { navController.navigate("settings") }
                 )
             }
             composable("settings") { SettingsScreen() }

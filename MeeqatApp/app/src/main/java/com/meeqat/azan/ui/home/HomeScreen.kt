@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.displayCutoutPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,6 +66,7 @@ private val MosqueBlue = Color(0xFF4A5A85)
 @Composable
 fun HomeScreen(
     onLocationClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val ui by viewModel.ui.collectAsState()
@@ -84,7 +91,7 @@ fun HomeScreen(
                 "Fajr Start" to "05:11" to false,
                 "Fajr End" to "06:06" to false,
                 "Ishraq" to "06:26" to false,
-                "Zohar" to "12:19" to false,
+                "Dhuhr" to "12:19" to false,
             )
         } else {
             listOf(
@@ -92,7 +99,7 @@ fun HomeScreen(
                 "Fajr Start" to formatTime(times.fajr) to isNext(times.fajr, times, now),
                 "Fajr End" to formatTime(times.sunrise) to isNext(times.sunrise, times, now),
                 "Ishraq" to formatTime(times.sunrise + 15 * 60 * 1000) to false,
-                "Zohar" to formatTime(times.dhuhr) to (times.dhuhr > now),
+                "Dhuhr" to formatTime(times.dhuhr) to (times.dhuhr > now),
             )
         }
     }
@@ -134,10 +141,13 @@ fun HomeScreen(
                         )
                     )
                 )
-                // Top bar: date + calendar.
+                // Top bar: date + calendar + settings (inside system-bar safe area).
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 48.dp, start = 20.dp, end = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    Modifier.fillMaxWidth()
+                        .statusBarsPadding()
+                        .displayCutoutPadding()
+                        .padding(top = 12.dp, start = 20.dp, end = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
                     Column(Modifier.weight(1f)) {
@@ -162,6 +172,18 @@ fun HomeScreen(
                         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                             Icon(Icons.Filled.CalendarToday, null, tint = MosqueBlue, modifier = Modifier.size(24.dp))
                         }
+                    }
+                    androidx.compose.material3.IconButton(
+                        onClick = onSettingsClick,
+                        modifier = Modifier.size(48.dp)
+                            .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(14.dp))
+                    ) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Open settings",
+                            tint = MosqueBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
                 // Bottom hero: next prayer big text.
@@ -202,7 +224,7 @@ fun HomeScreen(
                         val (name, time) = pair
                         BigPrayerRow(name = name, time = time, isActive = isActive, onToggle = {})
                     }
-                    Spacer(Modifier.height(96.dp))
+                    Spacer(Modifier.height(24.dp).navigationBarsPadding())
                 }
             }
         }
@@ -243,13 +265,16 @@ private fun BigPrayerRow(
                 Text(
                     time,
                     style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextTime, fontWeight = FontWeight.W700, fontSize = 22.sp
+                        color = TextTime, fontWeight = FontWeight.W700, fontSize = 22.sp,
+                        fontFeatureSettings = "tnum"
                     ),
                     maxLines = 1
                 )
                 Switch(
                     checked = enabled,
                     onCheckedChange = { enabled = it; onToggle() },
+                    modifier = Modifier.size(width = 56.dp, height = 32.dp)
+                        .semantics { contentDescription = "Alarm for $name" },
                     thumbContent = {
                         Icon(
                             if (enabled) Icons.Filled.Notifications else Icons.Filled.NotificationsOff,
@@ -263,8 +288,7 @@ private fun BigPrayerRow(
                         uncheckedTrackColor = Color(0xFFD0D8E5),
                         checkedBorderColor = Color.Transparent,
                         uncheckedBorderColor = Color.Transparent
-                    ),
-                    modifier = Modifier.size(width = 56.dp, height = 32.dp)
+                    )
                 )
             }
         }
