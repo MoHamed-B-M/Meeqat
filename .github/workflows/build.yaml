@@ -96,6 +96,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x "$PROJECT_DIR/gradlew"
 
+      - name: Restore preview keystore (stable signature for updates)
+        uses: actions/cache@v4
+        with:
+          path: MeeqatApp/app/release.keystore
+          key: meeqat-preview-keystore-v1
+          restore-keys: |
+            meeqat-preview-keystore-
+
       - name: Resolve version
         id: version
         run: |
@@ -109,7 +117,7 @@ jobs:
             CODE="$STABLE_BUILD"
             TAG="v${VN}+${CODE}"
             DISPLAY="${VN}+${CODE}"
-            if [[ "$DISPLAY" == "1.0.0+1" ]]; then SUFFIX=" — First Release"; else SUFFIX=""; fi
+            if [[ "$DISPLAY" == "1.0.0+2" ]]; then SUFFIX=" — First Release"; else SUFFIX=""; fi
           else
             VN="${BASE_VERSION}-dev(#${{ github.run_number }})"
             CODE="$(($BETA_CODE_OFFSET + ${{ github.run_number }}))"
@@ -133,7 +141,13 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -e
-          if [[ -n "$KEYSTORE_BASE64" ]]; then
+          if [[ -f "$PROJECT_DIR/app/release.keystore" ]]; then
+            echo "→ Reusing cached preview keystore (stable signature, updates will install)"
+            echo "KEYSTORE_PATH=$PROJECT_DIR/app/release.keystore" >> "$GITHUB_ENV"
+            echo "KEYSTORE_PASSWORD=meeqat123" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=meeqat" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=meeqat123" >> "$GITHUB_ENV"
+          elif [[ -n "$KEYSTORE_BASE64" ]]; then
             echo "→ Decoding keystore from secrets.KEYSTORE_BASE64"
             echo "$KEYSTORE_BASE64" | base64 --decode > "$PROJECT_DIR/app/release.keystore"
             echo "KEYSTORE_PATH=$PROJECT_DIR/app/release.keystore" >> "$GITHUB_ENV"
